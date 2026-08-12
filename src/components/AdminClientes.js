@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ArrowLeft, Plus, Trash2, Building2, Loader2, Check, X } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Building2, Loader2, Image as ImageIcon, Upload } from 'lucide-react'
 import {
   Card, CardTitle, Label, Input, BtnPrimary, BtnGhost, EmptyState
 } from './contratistas/ui'
@@ -21,6 +21,11 @@ export default function AdminClientes({ onVolver }) {
   const [confirmDel, setConfirmDel] = useState(null)
   const [cargando, setCargando] = useState(true)
 
+  const [logoFile, setLogoFile] = useState(null)
+  const [logoPreview, setLogoPreview] = useState(null)
+  const [subiendoLogo, setSubiendoLogo] = useState(false)
+  const fileInputRef = useRef(null)
+
   useEffect(() => { cargar() }, [])
 
   const cargar = async () => {
@@ -29,16 +34,51 @@ export default function AdminClientes({ onVolver }) {
     setCargando(false)
   }
 
+  const seleccionarLogo = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file))
+  }
+
+  const subirLogo = async (clienteId) => {
+    if (!logoFile) return null
+    setSubiendoLogo(true)
+    const ext = logoFile.name.split('.').pop()
+    const path = `${clienteId}-${Date.now()}.${ext}`
+
+    const { error } = await supabase.storage
+      .from('logos-clientes')
+      .upload(path, logoFile, { upsert: true })
+
+    setSubiendoLogo(false)
+    if (error) { console.error(error); return null }
+
+    const { data } = supabase.storage.from('logos-clientes').getPublicUrl(path)
+    return data.publicUrl
+  }
+
   const guardar = async () => {
     if (!form.nombre.trim()) return
     setGuardando(true)
+
     if (editando) {
-      await supabase.from('clientes').update(form).eq('id', editando)
+      let logo_url
+      if (logoFile) logo_url = await subirLogo(editando)
+      const payload = { ...form, ...(logo_url ? { logo_url } : {}) }
+      await supabase.from('clientes').update(payload).eq('id', editando)
       setEditando(null)
     } else {
-      await supabase.from('clientes').insert(form)
+      const { data: nuevo } = await supabase.from('clientes').insert(form).select().single()
+      if (nuevo && logoFile) {
+        const logo_url = await subirLogo(nuevo.id)
+        if (logo_url) await supabase.from('clientes').update({ logo_url }).eq('id', nuevo.id)
+      }
     }
+
     setForm({ nombre: '', contacto: '', rut: '' })
+    setLogoFile(null); setLogoPreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
     await cargar()
     setGuardando(false)
   }
@@ -52,6 +92,15 @@ export default function AdminClientes({ onVolver }) {
   const editar = (c) => {
     setEditando(c.id)
     setForm({ nombre: c.nombre, contacto: c.contacto || '', rut: c.rut || '' })
+    setLogoFile(null)
+    setLogoPreview(c.logo_url || null)
+  }
+
+  const cancelarEdicion = () => {
+    setEditando(null)
+    setForm({ nombre: '', contacto: '', rut: '' })
+    setLogoFile(null); setLogoPreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const toggleActivo = async (c) => {
@@ -87,6 +136,37 @@ export default function AdminClientes({ onVolver }) {
       {/* Formulario */}
       <Card className="p-6 mb-6">
         <CardTitle>{editando ? 'Editar cliente' : 'Agregar cliente nuevo'}</CardTitle>
+
+        <div className="flex items-start gap-5 mb-5">
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="w-20 h-20 rounded-lg border-2 border-dashed border-hairline flex items-center justify-center
+                       shrink-0 cursor-pointer overflow-hidden bg-slate-50 hover:border-accent transition-colors"
+          >
+            {logoPreview ? (
+              <img src={logoPreview} alt="Logo" className="w-full h-full object-contain p-1" />
+            ) : (
+              <ImageIcon className="w-6 h-6 text-slate-300" strokeWidth={1.5} />
+            )}
+          </div>
+          <div>
+            <Label>Logo del cliente</Label>
+            <input
+              ref={fileInputRef} type="file" accept="image/*"
+              onChange={seleccionarLogo} className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-[13px] font-semibold text-slate
+                         border-[1.5px] border-hairline transition-colors hover:border-accent hover:text-accent"
+            >
+              <Upload className="w-3.5 h-3.5" strokeWidth={1.8} />
+              {logoPreview ? 'Cambiar imagen' : 'Subir imagen'}
+            </button>
+            <p className="text-xs text-slate mt-2">PNG o JPG, fondo transparente recomendado.</p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
           {CAMPOS.map(([k, l, p]) => (
             <div key={k}>
@@ -97,14 +177,12 @@ export default function AdminClientes({ onVolver }) {
           ))}
         </div>
         <div className="flex gap-2.5">
-          <BtnPrimary onClick={guardar} disabled={guardando || !form.nombre.trim()}>
+          <BtnPrimary onClick={guardar} disabled={guardando || subiendoLogo || !form.nombre.trim()}>
             {!editando && <Plus className="w-4 h-4" strokeWidth={2.2} />}
-            {guardando ? 'Guardando...' : editando ? 'Guardar cambios' : 'Agregar cliente'}
+            {guardando || subiendoLogo ? 'Guardando...' : editando ? 'Guardar cambios' : 'Agregar cliente'}
           </BtnPrimary>
           {editando && (
-            <BtnGhost onClick={() => { setEditando(null); setForm({ nombre: '', contacto: '', rut: '' }) }}>
-              Cancelar
-            </BtnGhost>
+            <BtnGhost onClick={cancelarEdicion}>Cancelar</BtnGhost>
           )}
         </div>
       </Card>
@@ -124,6 +202,13 @@ export default function AdminClientes({ onVolver }) {
             className={`flex flex-wrap items-center gap-3 px-6 py-4
                         ${i > 0 ? 'border-t border-hairline' : ''}
                         ${!c.activo ? 'bg-slate-50' : ''}`}>
+
+            <div className="w-10 h-10 rounded-lg border border-hairline bg-white flex items-center justify-center shrink-0 overflow-hidden">
+              {c.logo_url
+                ? <img src={c.logo_url} alt={c.nombre} className="w-full h-full object-contain p-1" />
+                : <Building2 className="w-4 h-4 text-slate-300" strokeWidth={1.6} />}
+            </div>
+
             <div className="flex-1 min-w-[200px]">
               <div className="flex items-center gap-2.5">
                 <p className={`text-[15px] font-semibold ${c.activo ? 'text-ink' : 'text-slate'}`}>
