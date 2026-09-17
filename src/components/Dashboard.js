@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import {
   CheckCircle2, HardHat, ClipboardList, TriangleAlert, ShieldCheck, Wrench,
-  Users, Building2, LogOut, Menu, X, ChevronRight, ArrowLeft
+  Users, Building2, LogOut, Menu, X, ChevronRight, ArrowLeft,
+  Gauge, PersonStanding, Flame
 } from 'lucide-react'
 import Contratistas from './contratistas'
 import ControlesOperativos from './controles-operativos'
@@ -15,6 +16,9 @@ import { useIsMobile } from '@/lib/useResponsive'
 export const MODULOS = [
   { id: 'controles',   Icon: CheckCircle2,   label: 'Controles Operativos',   desc: 'Inspecciones por tipo de equipo con exportación PDF.',                   activo: true  },
   { id: 'contratistas',Icon: HardHat,        label: 'Control de Contratistas',desc: 'Gestión documental de empresas contratistas y sus trabajadores.',        activo: true  },
+  { id: 'mediciones',  Icon: Gauge,          label: 'Mediciones de Higiene',  desc: 'Iluminación, ruido y puesta a tierra en un solo módulo.',                activo: false },
+  { id: 'ergonomico',  Icon: PersonStanding, label: 'Estudio Ergonómico',     desc: 'Evaluación de puestos de trabajo y factores de riesgo ergonómico.',      activo: false },
+  { id: 'carga_fuego', Icon: Flame,          label: 'Estudio de Carga de Fuego', desc: 'Cálculo de carga de fuego por sector según normativa vigente.',       activo: false },
   { id: 'incidentes',  Icon: ClipboardList,  label: 'Registro de Incidentes', desc: 'Documentación de accidentes, casi-accidentes y situaciones de riesgo.',  activo: false },
   { id: 'riesgo',      Icon: TriangleAlert,  label: 'Matriz de Riesgo',       desc: 'Evaluación y priorización de riesgos por probabilidad e impacto.',       activo: false },
   { id: 'epp',         Icon: ShieldCheck,    label: 'Gestión de EPP',         desc: 'Control de entrega y stock de equipos de protección personal.',          activo: false },
@@ -24,6 +28,9 @@ export const MODULOS = [
 const NAV = [
   { id: 'controles',    icon: CheckCircle2,  label: 'Controles Operativos' },
   { id: 'contratistas', icon: HardHat,       label: 'Contratistas' },
+  { id: 'mediciones',   icon: Gauge,          label: 'Mediciones de Higiene' },
+  { id: 'ergonomico',   icon: PersonStanding, label: 'Estudio Ergonómico' },
+  { id: 'carga_fuego',  icon: Flame,          label: 'Carga de Fuego' },
   { id: 'incidentes',   icon: ClipboardList, label: 'Incidentes' },
   { id: 'riesgo',       icon: TriangleAlert, label: 'Matriz de Riesgo' },
   { id: 'epp',          icon: ShieldCheck,   label: 'Gestión EPP' },
