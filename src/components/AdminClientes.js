@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ArrowLeft, Plus, Trash2, Building2, Loader2, Image as ImageIcon, Upload } from 'lucide-react'
+import {
+  ArrowLeft, Plus, Trash2, Building2, Loader2, Image as ImageIcon, Upload,
+  ChevronDown, ChevronUp, MapPin
+} from 'lucide-react'
 import {
   Card, CardTitle, Label, Input, BtnPrimary, BtnGhost, EmptyState
 } from './contratistas/ui'
@@ -13,6 +16,102 @@ const CAMPOS = [
   ['rut',      'CUIT / RUT',             '30-12345678-9'],
 ]
 
+// ─── ESTABLECIMIENTOS DE UN CLIENTE ──────────────────────────────────────────
+function Establecimientos({ cliente }) {
+  const [items, setItems] = useState([])
+  const [nombre, setNombre] = useState('')
+  const [direccion, setDireccion] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [confirmDel, setConfirmDel] = useState(null)
+  const [cargando, setCargando] = useState(true)
+
+  useEffect(() => { cargar() }, [cliente.id])
+
+  const cargar = async () => {
+    const { data } = await supabase.from('establecimientos').select('*')
+      .eq('cliente_id', cliente.id).order('nombre')
+    setItems(data || [])
+    setCargando(false)
+  }
+
+  const agregar = async () => {
+    if (!nombre.trim()) return
+    setGuardando(true)
+    await supabase.from('establecimientos').insert({
+      cliente_id: cliente.id, nombre: nombre.trim(), direccion: direccion.trim() || null,
+    })
+    setNombre(''); setDireccion('')
+    await cargar()
+    setGuardando(false)
+  }
+
+  const eliminar = async (id) => {
+    await supabase.from('establecimientos').delete().eq('id', id)
+    setConfirmDel(null)
+    await cargar()
+  }
+
+  return (
+    <div className="bg-slate-50 border-t border-hairline px-6 py-4">
+      <p className="text-[11px] font-bold text-slate uppercase tracking-wider mb-3 flex items-center gap-1.5">
+        <MapPin className="w-3.5 h-3.5" strokeWidth={2} />
+        Establecimientos de {cliente.nombre}
+      </p>
+
+      <div className="flex flex-col sm:flex-row gap-2 mb-3">
+        <Input placeholder="Nombre del establecimiento (ej: Planta Norte)"
+          value={nombre} onChange={e => setNombre(e.target.value)} className="flex-1" />
+        <Input placeholder="Dirección (opcional)"
+          value={direccion} onChange={e => setDireccion(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && agregar()} className="sm:w-[240px]" />
+        <BtnPrimary onClick={agregar} disabled={guardando || !nombre.trim()} className="shrink-0 px-4 py-2 text-[13px]">
+          <Plus className="w-3.5 h-3.5" strokeWidth={2.2} />
+          Agregar
+        </BtnPrimary>
+      </div>
+
+      {cargando ? (
+        <div className="flex items-center gap-2 text-slate text-sm py-2">
+          <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
+          Cargando...
+        </div>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-slate italic py-1">Sin establecimientos cargados.</p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {items.map(e => (
+            <div key={e.id} className="flex items-center gap-2.5 bg-white border border-hairline rounded-md px-3 py-2">
+              <Building2 className="w-3.5 h-3.5 text-slate shrink-0" strokeWidth={1.8} />
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-ink">{e.nombre}</p>
+                {e.direccion && <p className="text-[11px] text-slate">{e.direccion}</p>}
+              </div>
+              {confirmDel === e.id ? (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[12px] text-danger">¿Eliminar?</span>
+                  <button onClick={() => eliminar(e.id)}
+                    className="px-2 py-1 rounded text-[12px] font-semibold text-white bg-danger hover:bg-red-800">
+                    Sí
+                  </button>
+                  <button onClick={() => setConfirmDel(null)}
+                    className="px-2 py-1 rounded text-[12px] font-semibold text-slate border border-hairline">
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmDel(e.id)}
+                  className="p-1 rounded text-danger border border-red-200 hover:bg-red-50 shrink-0">
+                  <Trash2 className="w-3 h-3" strokeWidth={2} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AdminClientes({ onVolver }) {
   const [clientes, setClientes] = useState([])
   const [form, setForm] = useState({ nombre: '', contacto: '', rut: '' })
@@ -20,6 +119,7 @@ export default function AdminClientes({ onVolver }) {
   const [guardando, setGuardando] = useState(false)
   const [confirmDel, setConfirmDel] = useState(null)
   const [cargando, setCargando] = useState(true)
+  const [expandidoId, setExpandidoId] = useState(null)
 
   const [logoFile, setLogoFile] = useState(null)
   const [logoPreview, setLogoPreview] = useState(null)
@@ -133,7 +233,6 @@ export default function AdminClientes({ onVolver }) {
         </BtnGhost>
       </div>
 
-      {/* Formulario */}
       <Card className="p-6 mb-6">
         <CardTitle>{editando ? 'Editar cliente' : 'Agregar cliente nuevo'}</CardTitle>
 
@@ -187,7 +286,6 @@ export default function AdminClientes({ onVolver }) {
         </div>
       </Card>
 
-      {/* Lista */}
       <Card className="overflow-hidden">
         <div className="px-6 py-4 border-b border-hairline">
           <h3 className="text-[15px] font-semibold text-ink">
@@ -198,63 +296,73 @@ export default function AdminClientes({ onVolver }) {
         {clientes.length === 0 ? (
           <EmptyState Icon={Building2} title="No hay clientes cargados" />
         ) : clientes.map((c, i) => (
-          <div key={c.id}
-            className={`flex flex-wrap items-center gap-3 px-6 py-4
-                        ${i > 0 ? 'border-t border-hairline' : ''}
-                        ${!c.activo ? 'bg-slate-50' : ''}`}>
+          <div key={c.id} className={i > 0 ? 'border-t border-hairline' : ''}>
+            <div className={`flex flex-wrap items-center gap-3 px-6 py-4 ${!c.activo ? 'bg-slate-50' : ''}`}>
 
-            <div className="w-10 h-10 rounded-lg border border-hairline bg-white flex items-center justify-center shrink-0 overflow-hidden">
-              {c.logo_url
-                ? <img src={c.logo_url} alt={c.nombre} className="w-full h-full object-contain p-1" />
-                : <Building2 className="w-4 h-4 text-slate-300" strokeWidth={1.6} />}
-            </div>
-
-            <div className="flex-1 min-w-[200px]">
-              <div className="flex items-center gap-2.5">
-                <p className={`text-[15px] font-semibold ${c.activo ? 'text-ink' : 'text-slate'}`}>
-                  {c.nombre}
-                </p>
-                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md
-                  ${c.activo ? 'bg-accent-light text-accent' : 'bg-hairline text-slate'}`}>
-                  {c.activo ? 'Activo' : 'Inactivo'}
-                </span>
+              <div className="w-10 h-10 rounded-lg border border-hairline bg-white flex items-center justify-center shrink-0 overflow-hidden">
+                {c.logo_url
+                  ? <img src={c.logo_url} alt={c.nombre} className="w-full h-full object-contain p-1" />
+                  : <Building2 className="w-4 h-4 text-slate-300" strokeWidth={1.6} />}
               </div>
-              <p className="text-[13px] text-slate mt-0.5">
-                {[c.contacto, c.rut].filter(Boolean).join(' · ') || 'Sin datos adicionales'}
-              </p>
+
+              <div className="flex-1 min-w-[200px]">
+                <div className="flex items-center gap-2.5">
+                  <p className={`text-[15px] font-semibold ${c.activo ? 'text-ink' : 'text-slate'}`}>
+                    {c.nombre}
+                  </p>
+                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md
+                    ${c.activo ? 'bg-accent-light text-accent' : 'bg-hairline text-slate'}`}>
+                    {c.activo ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+                <p className="text-[13px] text-slate mt-0.5">
+                  {[c.contacto, c.rut].filter(Boolean).join(' · ') || 'Sin datos adicionales'}
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button onClick={() => setExpandidoId(expandidoId === c.id ? null : c.id)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-[13px] font-semibold text-slate
+                             border-[1.5px] border-hairline transition-colors hover:border-accent hover:text-accent">
+                  <MapPin className="w-3.5 h-3.5" strokeWidth={1.8} />
+                  Establecimientos
+                  {expandidoId === c.id
+                    ? <ChevronUp className="w-3.5 h-3.5" strokeWidth={2} />
+                    : <ChevronDown className="w-3.5 h-3.5" strokeWidth={2} />}
+                </button>
+                <button onClick={() => editar(c)}
+                  className="px-3.5 py-2 rounded-md text-[13px] font-semibold text-slate
+                             border-[1.5px] border-hairline transition-colors hover:border-accent hover:text-accent">
+                  Editar
+                </button>
+                <button onClick={() => toggleActivo(c)}
+                  className={`px-3.5 py-2 rounded-md text-[13px] font-semibold border-[1.5px] border-hairline
+                              transition-colors ${c.activo ? 'text-warn hover:border-warn' : 'text-success hover:border-success'}`}>
+                  {c.activo ? 'Desactivar' : 'Activar'}
+                </button>
+                {confirmDel === c.id ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[13px] text-danger">¿Confirmar?</span>
+                    <button onClick={() => eliminar(c.id)}
+                      className="px-3 py-2 rounded-md text-[13px] font-semibold text-white bg-danger hover:bg-red-800">
+                      Sí
+                    </button>
+                    <button onClick={() => setConfirmDel(null)}
+                      className="px-2.5 py-2 rounded-md text-[13px] font-semibold text-slate border-[1.5px] border-hairline">
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDel(c.id)}
+                    className="px-2.5 py-2 rounded-md text-danger border-[1.5px] border-red-200
+                               transition-colors hover:bg-red-50">
+                    <Trash2 className="w-4 h-4" strokeWidth={2} />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="flex gap-2">
-              <button onClick={() => editar(c)}
-                className="px-3.5 py-2 rounded-md text-[13px] font-semibold text-slate
-                           border-[1.5px] border-hairline transition-colors hover:border-accent hover:text-accent">
-                Editar
-              </button>
-              <button onClick={() => toggleActivo(c)}
-                className={`px-3.5 py-2 rounded-md text-[13px] font-semibold border-[1.5px] border-hairline
-                            transition-colors ${c.activo ? 'text-warn hover:border-warn' : 'text-success hover:border-success'}`}>
-                {c.activo ? 'Desactivar' : 'Activar'}
-              </button>
-              {confirmDel === c.id ? (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[13px] text-danger">¿Confirmar?</span>
-                  <button onClick={() => eliminar(c.id)}
-                    className="px-3 py-2 rounded-md text-[13px] font-semibold text-white bg-danger hover:bg-red-800">
-                    Sí
-                  </button>
-                  <button onClick={() => setConfirmDel(null)}
-                    className="px-2.5 py-2 rounded-md text-[13px] font-semibold text-slate border-[1.5px] border-hairline">
-                    No
-                  </button>
-                </div>
-              ) : (
-                <button onClick={() => setConfirmDel(c.id)}
-                  className="px-2.5 py-2 rounded-md text-danger border-[1.5px] border-red-200
-                             transition-colors hover:bg-red-50">
-                  <Trash2 className="w-4 h-4" strokeWidth={2} />
-                </button>
-              )}
-            </div>
+            {expandidoId === c.id && <Establecimientos cliente={c} />}
           </div>
         ))}
       </Card>

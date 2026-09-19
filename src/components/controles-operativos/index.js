@@ -4,11 +4,13 @@ import { useState } from 'react'
 import DashboardControlesOperativos from './DashboardControlesOperativos'
 import TemaDetalle from './TemaDetalle'
 import FormularioControl from './FormularioControl'
+import ConfigPersonas from './ConfigPersonas'
+import ConfigFrecuencias from './ConfigFrecuencias'
 import { Card, BtnGhost } from '../contratistas/ui'
 import { ArrowLeft } from 'lucide-react'
 
 export default function ControlesOperativos({ cliente, esAdmin, user }) {
-  const [vista, setVista] = useState('dashboard') // dashboard | tema | formulario | config
+  const [vista, setVista] = useState('dashboard') // dashboard | tema | formulario | config | personas
   const [temaActivo, setTemaActivo] = useState(null)
 
   const irDashboard = () => { setVista('dashboard'); setTemaActivo(null) }
@@ -37,21 +39,12 @@ export default function ControlesOperativos({ cliente, esAdmin, user }) {
     )
   }
 
+  if (vista === 'personas') {
+    return <ConfigPersonas cliente={cliente} onVolver={irDashboard} />
+  }
+
   if (vista === 'config') {
-    return (
-      <div className="max-w-[760px] mx-auto p-5 md:p-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-ink">Configurar frecuencias</h2>
-          <BtnGhost onClick={irDashboard}>
-            <ArrowLeft className="w-4 h-4" strokeWidth={2} />
-            Volver
-          </BtnGhost>
-        </div>
-        <Card className="p-8 text-center">
-          <p className="text-slate text-sm">El panel de configuración se construye en el próximo paso.</p>
-        </Card>
-      </div>
-    )
+    return <ConfigFrecuencias cliente={cliente} onVolver={irDashboard} />
   }
 
   return (
@@ -60,6 +53,7 @@ export default function ControlesOperativos({ cliente, esAdmin, user }) {
       esAdmin={esAdmin}
       onSeleccionarTema={(t) => { setTemaActivo(t); setVista('tema') }}
       onConfig={() => setVista('config')}
+      onConfigPersonas={() => setVista('personas')}
     />
   )
 }

@@ -64,7 +64,6 @@ export default function FichaContratista({ contratista, cliente, esAdmin, onVolv
       .insert({ ...formTrab, contratista_id: contratista.id })
       .select().single()
 
-    // Pre-cargar docs del trabajador desde el catálogo según su tipo
     if (trab) {
       const { data: catalogo } = await supabase
         .from('docs_catalogo').select('*')
@@ -141,7 +140,6 @@ export default function FichaContratista({ contratista, cliente, esAdmin, onVolv
   return (
     <div className="max-w-[960px] mx-auto p-5 md:p-8">
 
-      {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h2 className="text-xl md:text-[22px] font-bold text-ink tracking-tight">{contratista.nombre}</h2>
@@ -175,7 +173,6 @@ export default function FichaContratista({ contratista, cliente, esAdmin, onVolv
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex border-b border-hairline mb-6">
         <button className={tabCls('docs')} onClick={() => setTab('docs')}>
           <FileText className="w-4 h-4" strokeWidth={1.8} />
@@ -187,7 +184,6 @@ export default function FichaContratista({ contratista, cliente, esAdmin, onVolv
         </button>
       </div>
 
-      {/* TAB: DOCS EMPRESA */}
       {tab === 'docs' && (
         <Card className="overflow-hidden">
           {docsReq.length === 0 ? (
@@ -241,7 +237,6 @@ export default function FichaContratista({ contratista, cliente, esAdmin, onVolv
         </Card>
       )}
 
-      {/* TAB: TRABAJADORES */}
       {tab === 'trabajadores' && (
         <>
           <div className="flex justify-end mb-4">

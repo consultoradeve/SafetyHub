@@ -88,7 +88,6 @@ export default function ConfigDocumentos({ cliente, onVolver }) {
         </BtnGhost>
       </div>
 
-      {/* Formulario */}
       <Card className="p-6 mb-5">
         <CardTitle>Agregar documento requerido</CardTitle>
 
@@ -143,7 +142,6 @@ export default function ConfigDocumentos({ cliente, onVolver }) {
         </BtnPrimary>
       </Card>
 
-      {/* Lista configurada */}
       <Card className="overflow-hidden">
         <div className="px-6 py-4 border-b border-hairline">
           <h3 className="text-[15px] font-semibold text-ink">

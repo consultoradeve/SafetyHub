@@ -1,7 +1,5 @@
 'use client'
 
-import { Circle } from 'lucide-react'
-
 // ─── LÓGICA DE SEMÁFORO ──────────────────────────────────────────────────────
 export const calcEstado = (aplica, recibido, fechaVenc) => {
   if (!aplica) return 'no_aplica'

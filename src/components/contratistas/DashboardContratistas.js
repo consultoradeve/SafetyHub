@@ -100,7 +100,6 @@ export default function DashboardContratistas({ cliente, esAdmin, onVerEmpresa, 
   return (
     <div className="max-w-[960px] mx-auto p-5 md:p-8">
 
-      {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h2 className="text-xl md:text-[22px] font-bold text-ink tracking-tight">Control de Contratistas</h2>
@@ -120,7 +119,6 @@ export default function DashboardContratistas({ cliente, esAdmin, onVerEmpresa, 
         </div>
       </div>
 
-      {/* Tarjetas resumen */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5 mb-6">
         {[
           { label: 'Total',      valor: totales.total,    cls: 'bg-white text-ink border-hairline' },
@@ -136,7 +134,6 @@ export default function DashboardContratistas({ cliente, esAdmin, onVerEmpresa, 
         ))}
       </div>
 
-      {/* Lista */}
       {ordenados.length === 0 ? (
         <Card>
           <EmptyState
@@ -150,7 +147,6 @@ export default function DashboardContratistas({ cliente, esAdmin, onVerEmpresa, 
           {ordenados.map(d => (
             <Card key={d.contratista.id} className="overflow-hidden">
 
-              {/* Fila principal */}
               <div className="flex flex-wrap items-center gap-3 p-4 md:px-5">
                 <Dot estado={d.estadoGlobal} />
                 <div className="flex-1 min-w-0">
@@ -160,7 +156,6 @@ export default function DashboardContratistas({ cliente, esAdmin, onVerEmpresa, 
                   )}
                 </div>
 
-                {/* Barra de progreso */}
                 {d.resumen.total > 0 && (
                   <div className="w-full md:w-[130px] order-last md:order-none">
                     <div className="flex h-1.5 rounded-full overflow-hidden gap-px mb-1">
@@ -221,7 +216,6 @@ export default function DashboardContratistas({ cliente, esAdmin, onVerEmpresa, 
                 </div>
               </div>
 
-              {/* Panel expandido */}
               {expandido === d.contratista.id && (
                 <div className="bg-slate-50 border-t border-hairline p-4 md:px-5 md:py-5">
 

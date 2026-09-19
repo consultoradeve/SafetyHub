@@ -29,13 +29,11 @@ export default function NuevaEmpresa({ cliente, onVolver, onGuardado }) {
     if (!form.nombre.trim() || !tipoPersonal) return
     setGuardando(true)
 
-    // 1. Crear la empresa
     const { data: empresa } = await supabase
       .from('contratistas')
       .insert({ ...form, cliente_id: cliente.id, tipo_personal: tipoPersonal })
       .select().single()
 
-    // 2. Pre-cargar documentos de empresa desde el catálogo
     if (empresa) {
       const { data: catalogo } = await supabase
         .from('docs_catalogo').select('*').eq('aplica_a', 'empresa').order('nombre')
@@ -80,7 +78,6 @@ export default function NuevaEmpresa({ cliente, onVolver, onGuardado }) {
   return (
     <div className="max-w-[760px] mx-auto p-5 md:p-8">
 
-      {/* Header con pasos */}
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h2 className="text-xl md:text-[22px] font-bold text-ink tracking-tight">Nueva empresa contratista</h2>
@@ -110,7 +107,6 @@ export default function NuevaEmpresa({ cliente, onVolver, onGuardado }) {
         </BtnGhost>
       </div>
 
-      {/* PASO 1 */}
       {paso === 1 && (
         <Card className="p-6 md:p-7">
           <CardTitle>Datos de la empresa</CardTitle>
@@ -136,7 +132,6 @@ export default function NuevaEmpresa({ cliente, onVolver, onGuardado }) {
         </Card>
       )}
 
-      {/* PASO 2 */}
       {paso === 2 && (
         <Card className="p-6 md:p-7">
           <CardTitle>¿Cómo está compuesto el personal de {form.nombre}?</CardTitle>

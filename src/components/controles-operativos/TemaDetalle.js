@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import {
   ArrowLeft, Plus, ChevronDown, ChevronUp, Loader2,
-  CircleCheck, CircleAlert, CircleX, Calendar, User, Printer
+  CircleCheck, CircleAlert, CircleX, Calendar, User, Printer, Camera
 } from 'lucide-react'
 import { Card, BtnPrimary, BtnGhost, EmptyState } from '../contratistas/ui'
 import ImprimirControl from './ImprimirControl'
@@ -25,7 +25,7 @@ export default function TemaDetalle({ tema, cliente, onNuevoControl, onVolver })
   const [expandido, setExpandido] = useState(null)
   const [respuestasPorControl, setRespuestasPorControl] = useState({})
   const [itemsCatalogo, setItemsCatalogo] = useState({})
-  const [imprimiendo, setImprimiendo] = useState(null) // control a imprimir
+  const [imprimiendo, setImprimiendo] = useState(null)
 
   useEffect(() => { cargar() }, [tema.id])
 
@@ -63,10 +63,24 @@ export default function TemaDetalle({ tema, cliente, onNuevoControl, onVolver })
 
   useEffect(() => {
     if (!imprimiendo) return
-    const timer = setTimeout(() => window.print(), 150)
+    let cancelado = false
+    const imprimirCuandoListo = async () => {
+      await new Promise(r => setTimeout(r, 50)) // deja que React pinte el DOM
+      const imgs = Array.from(document.querySelectorAll('.printable-area img'))
+      await Promise.all(imgs.map(img => {
+        if (img.complete) return Promise.resolve()
+        return new Promise(resolve => {
+          img.onload = resolve
+          img.onerror = resolve
+          setTimeout(resolve, 4000) // salvavidas si la imagen tarda demasiado
+        })
+      }))
+      if (!cancelado) window.print()
+    }
+    imprimirCuandoListo()
     const handleAfterPrint = () => setImprimiendo(null)
     window.addEventListener('afterprint', handleAfterPrint)
-    return () => { clearTimeout(timer); window.removeEventListener('afterprint', handleAfterPrint) }
+    return () => { cancelado = true; window.removeEventListener('afterprint', handleAfterPrint) }
   }, [imprimiendo])
 
   if (cargando) return (
@@ -149,10 +163,10 @@ export default function TemaDetalle({ tema, cliente, onNuevoControl, onVolver })
 
                 {expandido === c.id && (
                   <div className="border-t border-hairline bg-slate-50 px-5 py-4">
-                    {c.sector && (
+                    {(c.ubicacion || c.sector || c.auditor) && (
                       <p className="text-xs text-slate mb-3">
-                        Sector: <span className="text-ink font-medium">{c.sector}</span>
-                        {c.ubicacion && <> · Ubicación: <span className="text-ink font-medium">{c.ubicacion}</span></>}
+                        {c.sector && <>Subsector: <span className="text-ink font-medium">{c.sector}</span> · </>}
+                        Sector: <span className="text-ink font-medium">{c.ubicacion || '—'}</span>
                         {c.auditor && <> · Auditor: <span className="text-ink font-medium">{c.auditor}</span></>}
                       </p>
                     )}
@@ -186,6 +200,13 @@ export default function TemaDetalle({ tema, cliente, onNuevoControl, onVolver })
                             <div className="flex-1 min-w-0">
                               <p className="text-sm text-ink">{item?.texto || '—'}</p>
                               {r.observacion && <p className="text-xs text-slate mt-0.5 italic">{r.observacion}</p>}
+                              {r.foto_url && (
+                                <a href={r.foto_url} target="_blank" rel="noopener noreferrer"
+                                   className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline mt-1">
+                                  <Camera className="w-3 h-3" strokeWidth={2} />
+                                  Ver foto
+                                </a>
+                              )}
                             </div>
                           </div>
                         )

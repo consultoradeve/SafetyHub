@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import {
   ArrowLeft, ArrowRight, Plus, Loader2, Check,
-  CircleCheck, CircleAlert, CircleX, Printer
+  CircleCheck, CircleAlert, CircleX, Printer, Camera, X as XIcon
 } from 'lucide-react'
-import { Card, CardTitle, Label, Input, BtnPrimary, BtnGhost, EmptyState } from '../contratistas/ui'
+import { Card, CardTitle, Label, Input, Select, BtnPrimary, BtnGhost, EmptyState } from '../contratistas/ui'
 import ImprimirControl from './ImprimirControl'
+import { comprimirImagen } from '@/lib/comprimirImagen'
+import { nombreArchivoControl } from '@/lib/nombreArchivo'
 
 const RESULTADOS = [
   { value: 'aprobado',       label: 'Aprobado',                     Icon: CircleCheck, cls: 'border-green-600 bg-green-50 text-green-700' },
@@ -140,39 +142,90 @@ function SelectorEquipo({ tema, cliente, onSeleccionar, onVolver }) {
 // ─── FORMULARIO PRINCIPAL DEL CHECKLIST ──────────────────────────────────────
 function Checklist({ tema, cliente, equipo, user, onVolver, onGuardado }) {
   const [items, setItems] = useState([])
+  const [auditores, setAuditores] = useState([])
+  const [responsables, setResponsables] = useState([])
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [guardado, setGuardado] = useState(false)
 
+  // NOTA: "subsector" = campo opcional nuevo. "sector" ahora reemplaza al antiguo "ubicacion".
   const [cabecera, setCabecera] = useState({
     fecha: new Date().toISOString().split('T')[0],
-    responsable: '', auditor: '', sector: '', ubicacion: equipo?.ubicacion || '',
+    responsable: '', auditor: '', subsector: '', sector: equipo?.ubicacion || '',
   })
   const [respuestas, setRespuestas] = useState({})
   const [observaciones, setObservaciones] = useState({})
+  const [fotosFiles, setFotosFiles] = useState({})
+  const [fotosPreview, setFotosPreview] = useState({})
+  const [epigrafes, setEpigrafes] = useState({})
+  const [respuestasFinal, setRespuestasFinal] = useState([])
   const [resultado, setResultado] = useState('')
   const [obsGenerales, setObsGenerales] = useState('')
   const [plazoCorreccion, setPlazoCorreccion] = useState('')
   const [respCorreccion, setRespCorreccion] = useState('')
-  const [firmaOperador, setFirmaOperador] = useState('')
-  const [firmaAuditor, setFirmaAuditor] = useState('')
   const [imprimir, setImprimir] = useState(false)
 
-  useEffect(() => { cargarItems() }, [tema.id])
+  useEffect(() => { cargarTodo() }, [tema.id])
+
+  // Pre-completa "Responsable de la corrección" con el Responsable del control,
+  // la primera vez que aparece el bloque (el auditor puede cambiarlo si corresponde a otra persona)
+  useEffect(() => {
+    if ((resultado === 'observaciones' || resultado === 'rechazado') && !respCorreccion && cabecera.responsable) {
+      setRespCorreccion(cabecera.responsable)
+    }
+  }, [resultado])
 
   useEffect(() => {
     if (!imprimir) return
-    const timer = setTimeout(() => window.print(), 150)
-    const handleAfterPrint = () => setImprimir(false)
+    const tituloOriginal = document.title
+    let cancelado = false
+    const imprimirCuandoListo = async () => {
+      await new Promise(r => setTimeout(r, 50)) // deja que React pinte el DOM
+      const imgs = Array.from(document.querySelectorAll('.printable-area img'))
+      await Promise.all(imgs.map(img => {
+        if (img.complete) return Promise.resolve()
+        return new Promise(resolve => {
+          img.onload = resolve
+          img.onerror = resolve
+          setTimeout(resolve, 4000) // salvavidas si la imagen tarda demasiado
+        })
+      }))
+      if (!cancelado) {
+        document.title = nombreArchivoControl({
+          tema: tema.nombre, cliente: cliente.nombre,
+          equipoCodigo: equipo?.codigo, fecha: cabecera.fecha,
+        })
+        window.print()
+      }
+    }
+    imprimirCuandoListo()
+    const handleAfterPrint = () => { document.title = tituloOriginal; setImprimir(false) }
     window.addEventListener('afterprint', handleAfterPrint)
-    return () => { clearTimeout(timer); window.removeEventListener('afterprint', handleAfterPrint) }
+    return () => { cancelado = true; document.title = tituloOriginal; window.removeEventListener('afterprint', handleAfterPrint) }
   }, [imprimir])
 
-  const cargarItems = async () => {
-    const { data } = await supabase.from('co_items_catalogo').select('*')
-      .eq('tema_id', tema.id).eq('activo', true).order('orden')
-    setItems(data || [])
+  const cargarTodo = async () => {
+    const [{ data: itemsData }, { data: auditoresData }, { data: responsablesData }] = await Promise.all([
+      supabase.from('co_items_catalogo').select('*').eq('tema_id', tema.id).eq('activo', true).order('orden'),
+      supabase.from('co_auditores').select('*').eq('activo', true).order('nombre'),
+      supabase.from('co_responsables').select('*').eq('cliente_id', cliente.id).eq('activo', true).order('nombre'),
+    ])
+    setItems(itemsData || [])
+    setAuditores(auditoresData || [])
+    setResponsables(responsablesData || [])
     setCargando(false)
+  }
+
+  const manejarFoto = (itemId, file) => {
+    if (!file) return
+    setFotosFiles(prev => ({ ...prev, [itemId]: file }))
+    setFotosPreview(prev => ({ ...prev, [itemId]: URL.createObjectURL(file) }))
+  }
+
+  const quitarFoto = (itemId) => {
+    setFotosFiles(prev => { const n = { ...prev }; delete n[itemId]; return n })
+    setFotosPreview(prev => { const n = { ...prev }; delete n[itemId]; return n })
+    setEpigrafes(prev => { const n = { ...prev }; delete n[itemId]; return n })
   }
 
   const categorias = []
@@ -190,6 +243,9 @@ function Checklist({ tema, cliente, equipo, user, onVolver, onGuardado }) {
 
   const puedeGuardar = cabecera.responsable.trim() && resultado && respondidos > 0
 
+  // Busca la matrícula del auditor seleccionado (si viene de la lista) para incluirla en el PDF
+  const matriculaAuditor = auditores.find(a => a.nombre === cabecera.auditor)?.matricula || null
+
   const guardar = async () => {
     if (!puedeGuardar) return
     setGuardando(true)
@@ -202,28 +258,52 @@ function Checklist({ tema, cliente, equipo, user, onVolver, onGuardado }) {
       fecha: cabecera.fecha,
       responsable: cabecera.responsable,
       auditor: cabecera.auditor,
-      sector: cabecera.sector,
-      ubicacion: cabecera.ubicacion,
+      sector: cabecera.subsector,      // el campo DB "sector" ahora guarda el Subsector (opcional)
+      ubicacion: cabecera.sector,      // el campo DB "ubicacion" ahora guarda el Sector (antes Ubicación)
       resultado,
       observaciones_generales: obsGenerales,
       plazo_correccion: plazoCorreccion || null,
       responsable_correccion: respCorreccion || null,
       porcentaje_cumplimiento: porcentaje,
-      datos_extra: { firma_operador: firmaOperador, firma_auditor: firmaAuditor },
+      datos_extra: { auditor_matricula: matriculaAuditor },
     }).select().single()
 
+    let filas = []
     if (control) {
-      const filas = items
-        .filter(it => respuestas[it.id])
-        .map(it => ({
-          control_id: control.id,
-          item_id: it.id,
-          respuesta: respuestas[it.id],
-          observacion: observaciones[it.id] || null,
-        }))
+      filas = await Promise.all(
+        items.filter(it => respuestas[it.id]).map(async (it) => {
+          let foto_url = null
+          let foto_epigrafe = null
+          if (respuestas[it.id] === 'NO' && fotosFiles[it.id]) {
+            try {
+              const blob = await comprimirImagen(fotosFiles[it.id])
+              const path = `${control.id}-${it.id}-${Date.now()}.jpg`
+              const { error } = await supabase.storage
+                .from('fotos-desvios')
+                .upload(path, blob, { contentType: 'image/jpeg' })
+              if (!error) {
+                const { data: pub } = supabase.storage.from('fotos-desvios').getPublicUrl(path)
+                foto_url = pub.publicUrl
+                foto_epigrafe = epigrafes[it.id]?.trim() || null
+              }
+            } catch (e) {
+              console.error('Error subiendo foto:', e)
+            }
+          }
+          return {
+            control_id: control.id,
+            item_id: it.id,
+            respuesta: respuestas[it.id],
+            observacion: observaciones[it.id] || null,
+            foto_url,
+            foto_epigrafe,
+          }
+        })
+      )
       if (filas.length) await supabase.from('co_respuestas').insert(filas)
     }
 
+    setRespuestasFinal(filas)
     setGuardando(false)
     setGuardado(true)
   }
@@ -238,15 +318,12 @@ function Checklist({ tema, cliente, equipo, user, onVolver, onGuardado }) {
   if (guardado) {
     const itemsCatalogoLocal = {}
     items.forEach(it => { itemsCatalogoLocal[it.id] = it })
-    const respuestasLocal = items
-      .filter(it => respuestas[it.id])
-      .map(it => ({ item_id: it.id, respuesta: respuestas[it.id], observacion: observaciones[it.id] || null }))
     const controlLocal = {
       fecha: cabecera.fecha, responsable: cabecera.responsable, auditor: cabecera.auditor,
-      sector: cabecera.sector, ubicacion: cabecera.ubicacion, resultado,
+      sector: cabecera.subsector, ubicacion: cabecera.sector, resultado,
       observaciones_generales: obsGenerales, plazo_correccion: plazoCorreccion || null,
       responsable_correccion: respCorreccion || null, porcentaje_cumplimiento: porcentaje,
-      datos_extra: { firma_operador: firmaOperador, firma_auditor: firmaAuditor },
+      datos_extra: { auditor_matricula: matriculaAuditor },
     }
 
     return (
@@ -269,7 +346,7 @@ function Checklist({ tema, cliente, equipo, user, onVolver, onGuardado }) {
         {imprimir && (
           <ImprimirControl
             tema={tema} cliente={cliente} control={controlLocal}
-            respuestas={respuestasLocal} itemsCatalogo={itemsCatalogoLocal}
+            respuestas={respuestasFinal} itemsCatalogo={itemsCatalogoLocal}
           />
         )}
       </div>
@@ -300,25 +377,53 @@ function Checklist({ tema, cliente, equipo, user, onVolver, onGuardado }) {
             <Input type="date" value={cabecera.fecha}
               onChange={e => setCabecera({ ...cabecera, fecha: e.target.value })} />
           </div>
+
           <div>
             <Label>Responsable *</Label>
-            <Input placeholder="Nombre" value={cabecera.responsable}
-              onChange={e => setCabecera({ ...cabecera, responsable: e.target.value })} />
+            {responsables.length > 0 ? (
+              <Select value={cabecera.responsable} onChange={e => setCabecera({ ...cabecera, responsable: e.target.value })}>
+                <option value="">— Seleccionar —</option>
+                {responsables.map(r => <option key={r.id} value={r.nombre}>{r.nombre}</option>)}
+              </Select>
+            ) : (
+              <>
+                <Input placeholder="Nombre" value={cabecera.responsable}
+                  onChange={e => setCabecera({ ...cabecera, responsable: e.target.value })} />
+                <p className="text-xs text-slate mt-1.5">
+                  Sin lista configurada para este cliente. Se puede cargar en Configurar auditores/responsables.
+                </p>
+              </>
+            )}
           </div>
+
           <div>
             <Label>Auditor</Label>
-            <Input placeholder="Nombre" value={cabecera.auditor}
-              onChange={e => setCabecera({ ...cabecera, auditor: e.target.value })} />
+            {auditores.length > 0 ? (
+              <Select value={cabecera.auditor} onChange={e => setCabecera({ ...cabecera, auditor: e.target.value })}>
+                <option value="">— Seleccionar —</option>
+                {auditores.map(a => <option key={a.id} value={a.nombre}>{a.nombre}</option>)}
+              </Select>
+            ) : (
+              <>
+                <Input placeholder="Nombre" value={cabecera.auditor}
+                  onChange={e => setCabecera({ ...cabecera, auditor: e.target.value })} />
+                <p className="text-xs text-slate mt-1.5">
+                  Sin lista configurada para este cliente. Se puede cargar en Configurar auditores/responsables.
+                </p>
+              </>
+            )}
           </div>
+
           <div>
+            <Label>Subsector <span className="normal-case text-slate-400 font-normal">(campo opcional)</span></Label>
+            <Input placeholder="Ej: Línea 2" value={cabecera.subsector}
+              onChange={e => setCabecera({ ...cabecera, subsector: e.target.value })} />
+          </div>
+
+          <div className="md:col-span-2">
             <Label>Sector</Label>
             <Input placeholder="Ej: Planta, Depósito" value={cabecera.sector}
               onChange={e => setCabecera({ ...cabecera, sector: e.target.value })} />
-          </div>
-          <div className="md:col-span-2">
-            <Label>Ubicación</Label>
-            <Input placeholder="Ubicación específica" value={cabecera.ubicacion}
-              onChange={e => setCabecera({ ...cabecera, ubicacion: e.target.value })} />
           </div>
         </div>
       </Card>
@@ -344,7 +449,7 @@ function Checklist({ tema, cliente, equipo, user, onVolver, onGuardado }) {
           {cat.items.map((it, i) => (
             <div key={it.id} className={`px-5 py-4 ${i > 0 || cat.nombre ? 'border-t border-hairline' : ''}`}>
               <div className="flex flex-wrap items-center gap-3">
-                <p className="text-[15px] text-ink flex-1 min-w-[220px]">{it.texto}</p>
+                <p className="text-[15px] text-ink flex-1 min-w-[220px] text-left">{it.texto}</p>
                 <RespuestaBtns valor={respuestas[it.id]} onChange={v => setRespuestas({ ...respuestas, [it.id]: v })} />
               </div>
               <textarea
@@ -355,12 +460,51 @@ function Checklist({ tema, cliente, equipo, user, onVolver, onGuardado }) {
                 className="w-full mt-2.5 px-3 py-2 text-sm text-ink bg-slate-50 border border-hairline
                            rounded-md outline-none focus:border-accent resize-none placeholder:text-slate-400"
               />
+              {respuestas[it.id] === 'NO' && (
+                <div className="mt-2.5">
+                  {!fotosPreview[it.id] ? (
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12.5px] font-semibold
+                                       text-slate border-[1.5px] border-hairline cursor-pointer transition-colors
+                                       hover:border-accent hover:text-accent">
+                      <Camera className="w-3.5 h-3.5" strokeWidth={1.8} />
+                      Adjuntar foto (opcional)
+                      <input
+                        type="file" accept="image/*" capture="environment" className="hidden"
+                        onChange={e => manejarFoto(it.id, e.target.files?.[0])}
+                      />
+                    </label>
+                  ) : (
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <img src={fotosPreview[it.id]} alt="" className="w-14 h-14 object-cover rounded-md border border-hairline shrink-0" />
+                        <button onClick={() => quitarFoto(it.id)}
+                          className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-danger hover:underline shrink-0">
+                          <XIcon className="w-3.5 h-3.5" strokeWidth={2} />
+                          Quitar foto
+                        </button>
+                        <input
+                          type="text"
+                          maxLength={50}
+                          placeholder="Epígrafe de la foto (opcional)..."
+                          value={epigrafes[it.id] || ''}
+                          onChange={e => setEpigrafes({ ...epigrafes, [it.id]: e.target.value })}
+                          className="flex-1 min-w-0 px-2.5 py-1.5 text-[13px] text-ink bg-white border-[1.5px]
+                                     border-hairline rounded-md outline-none focus:border-accent placeholder:text-slate-400"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate mt-1.5">
+                        Si lo dejás vacío, aparecerá como "Desvío {"{n}"}" en el PDF.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </Card>
       ))}
 
-      <Card className="p-6 mb-5">
+      <Card className="p-6 mb-6">
         <CardTitle>Resultado general</CardTitle>
         <div className="flex flex-col sm:flex-row gap-2.5 mb-5">
           {RESULTADOS.map(r => (
@@ -395,23 +539,11 @@ function Checklist({ tema, cliente, equipo, user, onVolver, onGuardado }) {
         )}
       </Card>
 
-      <Card className="p-6 mb-6">
-        <CardTitle>Firmas</CardTitle>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label>Operador / Usuario</Label>
-            <Input placeholder="Nombre y aclaración" value={firmaOperador} onChange={e => setFirmaOperador(e.target.value)} />
-          </div>
-          <div>
-            <Label>Auditor / Inspector</Label>
-            <Input placeholder="Nombre y aclaración" value={firmaAuditor} onChange={e => setFirmaAuditor(e.target.value)} />
-          </div>
-        </div>
-      </Card>
-
       <div className="flex justify-end">
         <BtnPrimary onClick={guardar} disabled={guardando || !puedeGuardar}>
-          {guardando ? 'Guardando...' : 'Guardar control'}
+          {guardando
+            ? (Object.keys(fotosFiles).length > 0 ? 'Subiendo fotos...' : 'Guardando...')
+            : 'Guardar control'}
         </BtnPrimary>
       </div>
       {!puedeGuardar && (

@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import {
   Zap, Link2, Warehouse, Truck, MoveVertical, ShieldHalf,
   HeartPulse, DoorOpen, Flame, Droplets, HardHat as HardHatIcon,
-  ArrowUpDown, Settings, ArrowRight, Loader2, Clock
+  ArrowUpDown, Settings, Users, ArrowRight, Loader2, Clock
 } from 'lucide-react'
 import { Dot, Badge, Card, BtnGhost, EmptyState } from '../contratistas/ui'
 
@@ -40,10 +40,10 @@ const FRECUENCIA_LABEL = {
 // ─── CÁLCULO DE ESTADO POR TEMA ───────────────────────────────────────────────
 function calcularEstadoTema(config, ultimoControl) {
   if (!config) return 'sin_config'
-  if (!ultimoControl) return 'rojo' // nunca se hizo el control
+  if (!ultimoControl) return 'rojo'
 
   const dias = DIAS_FRECUENCIA[config.frecuencia]
-  if (dias === null || dias === undefined) return 'verde' // única vez, ya se hizo
+  if (dias === null || dias === undefined) return 'verde'
 
   const fechaUltimo = new Date(ultimoControl.fecha)
   const fechaProxima = new Date(fechaUltimo)
@@ -62,10 +62,10 @@ const SEMAFORO_EXTRA = {
   sin_config: { label: 'Sin configurar', dot: 'bg-slate-300', chip: 'bg-slate-100 text-slate-500 border-slate-200' },
 }
 
-export default function DashboardControlesOperativos({ cliente, esAdmin, onSeleccionarTema, onConfig }) {
+export default function DashboardControlesOperativos({ cliente, esAdmin, onSeleccionarTema, onConfig, onConfigPersonas }) {
   const [cargando, setCargando] = useState(true)
   const [temas, setTemas] = useState([])
-  const [datos, setDatos] = useState({}) // { tema_id: { config, ultimoControl, estado } }
+  const [datos, setDatos] = useState({})
 
   useEffect(() => { cargar() }, [cliente.id])
 
@@ -83,7 +83,7 @@ export default function DashboardControlesOperativos({ cliente, esAdmin, onSelec
 
     const ultimosMap = {}
     ;(controles || []).forEach(c => {
-      if (!ultimosMap[c.tema_id]) ultimosMap[c.tema_id] = c // ya viene ordenado desc
+      if (!ultimosMap[c.tema_id]) ultimosMap[c.tema_id] = c
     })
 
     const nuevosDatos = {}
@@ -124,7 +124,6 @@ export default function DashboardControlesOperativos({ cliente, esAdmin, onSelec
   return (
     <div className="max-w-[1000px] mx-auto p-5 md:p-8">
 
-      {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h2 className="text-xl md:text-[22px] font-bold text-ink tracking-tight">Controles Operativos</h2>
@@ -133,14 +132,19 @@ export default function DashboardControlesOperativos({ cliente, esAdmin, onSelec
           </p>
         </div>
         {esAdmin && (
-          <BtnGhost onClick={onConfig}>
-            <Settings className="w-4 h-4" strokeWidth={1.8} />
-            Configurar frecuencias
-          </BtnGhost>
+          <div className="flex flex-wrap gap-2.5">
+            <BtnGhost onClick={onConfigPersonas}>
+              <Users className="w-4 h-4" strokeWidth={1.8} />
+              Auditores y responsables
+            </BtnGhost>
+            <BtnGhost onClick={onConfig}>
+              <Settings className="w-4 h-4" strokeWidth={1.8} />
+              Configurar frecuencias
+            </BtnGhost>
+          </div>
         )}
       </div>
 
-      {/* Tarjetas resumen */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5 mb-6">
         {[
           { label: 'Total temas',   valor: totales.total,      cls: 'bg-white text-ink border-hairline' },
@@ -156,7 +160,6 @@ export default function DashboardControlesOperativos({ cliente, esAdmin, onSelec
         ))}
       </div>
 
-      {/* Grilla de temas */}
       {temas.length === 0 ? (
         <Card><EmptyState title="No hay temas configurados" /></Card>
       ) : (
