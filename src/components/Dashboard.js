@@ -5,10 +5,11 @@ import { supabase } from '@/lib/supabase'
 import {
   CheckCircle2, HardHat, ClipboardList, TriangleAlert, ShieldCheck, Wrench,
   Users, Building2, LogOut, Menu, X, ChevronRight, ArrowLeft,
-  Gauge, PersonStanding, Flame
+  Gauge, PersonStanding, Flame, Scale
 } from 'lucide-react'
 import Contratistas from './contratistas'
 import ControlesOperativos from './controles-operativos'
+import MatrizLegal from './matriz-legal'
 import AdminClientes from './AdminClientes'
 import AdminUsuarios from './AdminUsuarios'
 import { useIsMobile } from '@/lib/useResponsive'
@@ -16,6 +17,7 @@ import { useIsMobile } from '@/lib/useResponsive'
 export const MODULOS = [
   { id: 'controles',   Icon: CheckCircle2,   label: 'Controles Operativos',   desc: 'Inspecciones por tipo de equipo con exportación PDF.',                   activo: true  },
   { id: 'contratistas',Icon: HardHat,        label: 'Control de Contratistas',desc: 'Gestión documental de empresas contratistas y sus trabajadores.',        activo: true  },
+  { id: 'legal',       Icon: Scale,          label: 'Matriz de Cumplimiento Legal', desc: 'Requisitos legales por establecimiento con vencimientos y semáforo.', activo: true  },
   { id: 'mediciones',  Icon: Gauge,          label: 'Mediciones de Higiene',  desc: 'Iluminación, ruido y puesta a tierra en un solo módulo.',                activo: false },
   { id: 'ergonomico',  Icon: PersonStanding, label: 'Estudio Ergonómico',     desc: 'Evaluación de puestos de trabajo y factores de riesgo ergonómico.',      activo: false },
   { id: 'carga_fuego', Icon: Flame,          label: 'Estudio de Carga de Fuego', desc: 'Cálculo de carga de fuego por sector según normativa vigente.',       activo: false },
@@ -28,6 +30,7 @@ export const MODULOS = [
 const NAV = [
   { id: 'controles',    icon: CheckCircle2,  label: 'Controles Operativos' },
   { id: 'contratistas', icon: HardHat,       label: 'Contratistas' },
+  { id: 'legal',        icon: Scale,         label: 'Cumplimiento Legal' },
   { id: 'mediciones',   icon: Gauge,          label: 'Mediciones de Higiene' },
   { id: 'ergonomico',   icon: PersonStanding, label: 'Estudio Ergonómico' },
   { id: 'carga_fuego',  icon: Flame,          label: 'Carga de Fuego' },
@@ -186,6 +189,8 @@ export default function Dashboard({ user, perfil, cliente, esAdmin, onCambiarCli
     onCambiarCliente, onLogout: handleLogout,
   }
 
+  const MODULOS_CON_PANTALLA_PROPIA = ['contratistas', 'controles', 'legal']
+
   return (
     <div className="min-h-screen bg-bg flex flex-col">
 
@@ -252,7 +257,10 @@ export default function Dashboard({ user, perfil, cliente, esAdmin, onCambiarCli
               {moduloActivo === 'controles' && (
                 <ControlesOperativos cliente={cliente} esAdmin={esAdmin} user={user} />
               )}
-              {moduloActivo !== 'contratistas' && moduloActivo !== 'controles' && (
+              {moduloActivo === 'legal' && (
+                <MatrizLegal cliente={cliente} esAdmin={esAdmin} user={user} />
+              )}
+              {!MODULOS_CON_PANTALLA_PROPIA.includes(moduloActivo) && (
                 <div className="p-6 md:p-10 max-w-2xl">
                   <div className="bg-surface border border-hairline rounded-xl p-8 text-center">
                     <p className="text-slate text-sm">

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { Loader2, TriangleAlert } from 'lucide-react'
 import Login from '@/components/Login'
 import ClienteSelector from '@/components/ClienteSelector'
+import AccesoShell from '@/components/AccesoShell'
 import Dashboard from '@/components/Dashboard'
 
 export default function Home() {
@@ -57,7 +58,16 @@ export default function Home() {
     )
   }
 
-  if (!user) return <Login />
+  // Paso 1: sin sesión -> login. Paso 2 (solo admin): elegir cliente.
+  // Los dos pasos comparten la misma tarjeta y fondo (AccesoShell),
+  // así se siente como un único flujo que se transforma, no dos pantallas distintas.
+  if (!user) {
+    return (
+      <AccesoShell stepKey="login">
+        <Login />
+      </AccesoShell>
+    )
+  }
 
   const esAdmin = perfil?.rol === 'admin'
 
@@ -84,7 +94,13 @@ export default function Home() {
     )
   }
 
-  if (!cliente) return <ClienteSelector onSelect={setCliente} />
+  if (!cliente) {
+    return (
+      <AccesoShell stepKey="selector">
+        <ClienteSelector onSelect={setCliente} />
+      </AccesoShell>
+    )
+  }
 
   return (
     <Dashboard
