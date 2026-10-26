@@ -11,7 +11,7 @@ export const MODULOS = [
   { id: 'contratistas', Icon: HardHat,        label: 'Control de Contratistas',      desc: 'Gestión documental de empresas contratistas y sus trabajadores.',                     activo: true  },
   { id: 'legal',        Icon: Scale,          label: 'Matriz de Cumplimiento Legal', desc: 'Requisitos legales por establecimiento con vencimientos y semáforo.',                  activo: true  },
   { id: 'mediciones',   Icon: Gauge,          label: 'Mediciones de Higiene',        desc: 'Iluminación, ruido y puesta a tierra en un solo módulo.',                             activo: false },
-  { id: 'ergonomico',   Icon: PersonStanding, label: 'Estudio Ergonómico',           desc: 'Evaluación de puestos de trabajo y factores de riesgo ergonómico.',                   activo: false },
+  { id: 'ergonomico',   Icon: PersonStanding, label: 'Ergonomía',                    desc: 'Protocolo 886: estudios por puesto, matriz ergonómica y seguimiento de medidas.',   activo: true  },
   { id: 'carga_fuego',  Icon: Flame,          label: 'Estudio de Carga de Fuego',    desc: 'Cálculo de carga de fuego por sector según normativa vigente.',                       activo: false },
   { id: 'accidentes',   Icon: ClipboardList,  label: 'Investigación de Accidentes',  desc: 'Registro e investigación de accidentes, lecciones aprendidas y análisis de brecha.',  activo: false },
   { id: 'riesgo',       Icon: TriangleAlert,  label: 'Matriz de Riesgo',             desc: 'Evaluación y priorización de riesgos por probabilidad e impacto.',                    activo: false },

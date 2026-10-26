@@ -10,6 +10,7 @@ import {
 import Contratistas from './contratistas'
 import ControlesOperativos from './controles-operativos'
 import MatrizLegal from './matriz-legal'
+import Ergonomia from './ergonomia'
 import AdminClientes from './AdminClientes'
 import AdminUsuarios from './AdminUsuarios'
 import { useIsMobile } from '@/lib/useResponsive'
@@ -21,7 +22,7 @@ const NAV = [
   { id: 'contratistas', icon: HardHat,       label: 'Contratistas' },
   { id: 'legal',        icon: Scale,         label: 'Cumplimiento Legal' },
   { id: 'mediciones',   icon: Gauge,          label: 'Mediciones de Higiene' },
-  { id: 'ergonomico',   icon: PersonStanding, label: 'Estudio Ergonómico' },
+  { id: 'ergonomico',   icon: PersonStanding, label: 'Ergonomía' },
   { id: 'carga_fuego',  icon: Flame,          label: 'Carga de Fuego' },
   { id: 'accidentes',   icon: ClipboardList, label: 'Investigación de Accidentes' },
   { id: 'riesgo',       icon: TriangleAlert, label: 'Matriz de Riesgo' },
@@ -185,7 +186,7 @@ export default function Dashboard({ user, perfil, cliente, esAdmin, onCambiarCli
     onCambiarCliente, onLogout: handleLogout,
   }
 
-  const MODULOS_CON_PANTALLA_PROPIA = ['contratistas', 'controles', 'legal']
+  const MODULOS_CON_PANTALLA_PROPIA = ['contratistas', 'controles', 'legal', 'ergonomico']
 
   return (
     <div className="min-h-screen bg-bg flex flex-col">
@@ -252,6 +253,9 @@ export default function Dashboard({ user, perfil, cliente, esAdmin, onCambiarCli
               )}
               {moduloActivo === 'controles' && (
                 <ControlesOperativos cliente={cliente} esAdmin={puedeGestionar} user={user} />
+              )}
+              {moduloActivo === 'ergonomico' && (
+                <Ergonomia cliente={cliente} esAdmin={puedeGestionar} />
               )}
               {moduloActivo === 'legal' && (
                 <MatrizLegal cliente={cliente} esAdmin={puedeGestionar} user={user} />
