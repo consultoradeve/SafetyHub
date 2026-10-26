@@ -106,18 +106,14 @@ export default function DashboardRequisitos({ cliente, establecimiento, esAdmin,
               Responsables y umbrales
             </BtnGhost>
           )}
-          {esAdmin && (
-            <BtnPrimary onClick={onNuevo}>
-              <Plus className="w-4 h-4" strokeWidth={2.2} />
-              Nuevo requisito
-            </BtnPrimary>
-          )}
-          {onVolver && (
-            <BtnGhost onClick={onVolver}>
-              <ArrowLeft className="w-4 h-4" strokeWidth={2} />
-              Volver
-            </BtnGhost>
-          )}
+          <BtnPrimary onClick={onNuevo}>
+            <Plus className="w-4 h-4" strokeWidth={2.2} />
+            Nuevo requisito
+          </BtnPrimary>
+          <BtnGhost onClick={onVolver}>
+            <ArrowLeft className="w-4 h-4" strokeWidth={2} />
+            Volver
+          </BtnGhost>
         </div>
       </div>
 

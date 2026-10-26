@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Loader2 } from 'lucide-react'
+import { Loader2, TriangleAlert } from 'lucide-react'
 import Login from '@/components/Login'
-import SelectorAcceso from '@/components/SelectorAcceso'
+import ClienteSelector from '@/components/ClienteSelector'
 import AccesoShell from '@/components/AccesoShell'
 import Dashboard from '@/components/Dashboard'
 
@@ -12,9 +12,6 @@ export default function Home() {
   const [user, setUser] = useState(null)
   const [perfil, setPerfil] = useState(null)
   const [cliente, setCliente] = useState(null)
-  const [establecimiento, setEstablecimiento] = useState(null)
-  const [eligiendo, setEligiendo] = useState(true)
-  const [cantPlantas, setCantPlantas] = useState(0)
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => {
@@ -31,7 +28,7 @@ export default function Home() {
         setUser(session.user)
         await cargarPerfil(session.user.id)
       } else {
-        setUser(null); setPerfil(null); setCliente(null); setEstablecimiento(null); setEligiendo(true)
+        setUser(null); setPerfil(null); setCliente(null)
       }
     })
     return () => subscription.unsubscribe()
@@ -40,11 +37,14 @@ export default function Home() {
   const cargarPerfil = async (userId) => {
     const { data } = await supabase
       .from('profiles')
-      .select('*')
+      .select('*, clientes(*)')
       .eq('id', userId)
       .single()
 
-    if (data) setPerfil(data)
+    if (data) {
+      setPerfil(data)
+      if (data.rol === 'cliente' && data.clientes) setCliente(data.clientes)
+    }
   }
 
   if (cargando) {
@@ -58,7 +58,7 @@ export default function Home() {
     )
   }
 
-  // Paso 1: sin sesión -> login. Paso 2: elegir cliente y establecimiento.
+  // Paso 1: sin sesión -> login. Paso 2 (solo admin): elegir cliente.
   // Los dos pasos comparten la misma tarjeta y fondo (AccesoShell),
   // así se siente como un único flujo que se transforma, no dos pantallas distintas.
   if (!user) {
@@ -70,53 +70,45 @@ export default function Home() {
   }
 
   const esAdmin = perfil?.rol === 'admin'
-  const esGestor = esAdmin || perfil?.rol === 'supervisor'
 
-  const entrar = (c, e) => {
-    setCliente(c)
-    setEstablecimiento(e)
-    setEligiendo(false)
+  // Usuario de cliente sin cliente asignado
+  if (perfil?.rol === 'cliente' && !cliente) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-md w-full text-center">
+          <TriangleAlert className="w-10 h-10 text-warn mx-auto mb-4" strokeWidth={1.6} />
+          <h2 className="text-lg font-bold text-ink mb-2">
+            Sin cliente asignado
+          </h2>
+          <p className="text-[15px] text-slate mb-6">
+            Comunicate con el administrador para que te asigne un cliente.
+          </p>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="px-6 py-2.5 rounded-md bg-accent hover:bg-accent-hover text-white text-[15px] font-semibold transition-colors"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    )
   }
 
-  const irAlPanelGeneral = () => {
-    setCliente(null)
-    setEstablecimiento(null)
-  }
-
-  // Paso 2: técnicos y clientes eligen establecimiento (o entran directo si hay uno solo).
-  // Administrador y supervisores entran directo al Panel general.
-  if (!perfil || (eligiendo && !esGestor)) {
+  if (!cliente) {
     return (
       <AccesoShell stepKey="selector">
-        {perfil ? (
-          <SelectorAcceso
-            perfil={perfil}
-            clienteInicial={cliente}
-            onEntrar={entrar}
-            onPlantasCargadas={setCantPlantas}
-          />
-        ) : (
-          <div className="flex items-center gap-2.5 text-accent">
-            <Loader2 className="w-5 h-5 animate-spin" strokeWidth={2} />
-            Cargando...
-          </div>
-        )}
+        <ClienteSelector onSelect={setCliente} />
       </AccesoShell>
     )
   }
 
   return (
     <Dashboard
-      key={establecimiento?.id || cliente?.id || 'panel'}
       user={user}
       perfil={perfil}
       cliente={cliente}
-      establecimiento={establecimiento}
       esAdmin={esAdmin}
-      esGestor={esGestor}
-      puedeCambiarEstablecimiento={esGestor || cantPlantas > 1}
-      onCambiarEstablecimiento={esGestor ? irAlPanelGeneral : () => setEligiendo(true)}
-      onElegir={entrar}
+      onCambiarCliente={() => setCliente(null)}
     />
   )
 }

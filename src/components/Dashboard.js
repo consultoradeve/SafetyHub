@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import {
   CheckCircle2, HardHat, ClipboardList, TriangleAlert, ShieldCheck, Wrench,
-  Users, Building2, LogOut, Menu, X, ChevronRight, ArrowLeft, MapPin,
+  Users, Building2, LogOut, Menu, X, ChevronRight, ArrowLeft,
   Gauge, PersonStanding, Flame, Scale
 } from 'lucide-react'
 import Contratistas from './contratistas'
@@ -12,7 +12,6 @@ import ControlesOperativos from './controles-operativos'
 import MatrizLegal from './matriz-legal'
 import AdminClientes from './AdminClientes'
 import AdminUsuarios from './AdminUsuarios'
-import SelectorAcceso from './SelectorAcceso'
 import { useIsMobile } from '@/lib/useResponsive'
 import { MODULOS } from '@/lib/modulos'
 
@@ -59,7 +58,7 @@ function NavItem({ Icon, label, activo, disabled, badge, onClick }) {
   )
 }
 
-function SidebarContent({ cliente, establecimiento, modulosPlanta, esAdmin, esGestor, puedeCambiarEstablecimiento, rolLabel, moduloActivo, vistaAdmin, onModulo, onAdmin, onCambiarEstablecimiento, onLogout, onClose }) {
+function SidebarContent({ cliente, esAdmin, puedeCambiarCliente, rolLabel, moduloActivo, vistaAdmin, onModulo, onAdmin, onCambiarCliente, onLogout, onClose }) {
   const iniciales = cliente?.nombre?.slice(0, 2).toUpperCase() || 'DV'
   const go = (fn) => () => { fn(); onClose?.() }
 
@@ -77,7 +76,7 @@ function SidebarContent({ cliente, establecimiento, modulosPlanta, esAdmin, esGe
       {/* Cliente activo — con logo si tiene */}
       <div className="px-4 py-3 bg-accent-light border-b border-green-200">
         <p className="text-[11px] font-semibold text-accent uppercase tracking-wide mb-2">
-          {cliente ? 'Cliente activo' : 'Panel general'}
+          Cliente activo
         </p>
         <div className="flex items-center gap-2.5">
           {cliente?.logo_url ? (
@@ -89,20 +88,14 @@ function SidebarContent({ cliente, establecimiento, modulosPlanta, esAdmin, esGe
               <Building2 className="w-4 h-4 text-accent" strokeWidth={1.8} />
             </div>
           )}
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink leading-tight">{cliente?.nombre || 'Ningún cliente elegido'}</p>
-            <p className="text-xs text-slate leading-tight mt-0.5 flex items-center gap-1">
-              <MapPin className="w-3 h-3 shrink-0" strokeWidth={2} />
-              <span className="truncate">{establecimiento?.nombre || (cliente ? 'Sin establecimiento' : 'Elegí uno para trabajar')}</span>
-            </p>
-          </div>
+          <p className="text-sm font-semibold text-ink leading-tight">{cliente?.nombre}</p>
         </div>
-        {puedeCambiarEstablecimiento && cliente && (
+        {puedeCambiarCliente && (
           <button
-            onClick={go(onCambiarEstablecimiento)}
+            onClick={go(onCambiarCliente)}
             className="flex items-center gap-1 text-xs font-semibold text-accent mt-2 hover:underline"
           >
-            {esGestor ? 'Volver al panel general' : 'Cambiar establecimiento'}
+            Cambiar cliente
             <ChevronRight className="w-3 h-3" strokeWidth={2.5} />
           </button>
         )}
@@ -114,10 +107,7 @@ function SidebarContent({ cliente, establecimiento, modulosPlanta, esAdmin, esGe
           Módulos
         </p>
         {NAV.map(item => {
-          const desarrollado = MODULOS.find(m => m.id === item.id)?.activo
-          // Módulo desarrollado pero no habilitado en este establecimiento: no se muestra
-          if (desarrollado && !modulosPlanta.includes(item.id)) return null
-          const disponible = desarrollado
+          const disponible = MODULOS.find(m => m.id === item.id)?.activo
           const activo = moduloActivo === item.id
           return (
             <div key={item.id}>
@@ -166,7 +156,7 @@ function SidebarContent({ cliente, establecimiento, modulosPlanta, esAdmin, esGe
   )
 }
 
-export default function Dashboard({ user, perfil, cliente, establecimiento, esAdmin, esGestor, puedeCambiarEstablecimiento, onCambiarEstablecimiento, onElegir }) {
+export default function Dashboard({ user, perfil, cliente, esAdmin, onCambiarCliente }) {
   const [moduloActivo, setModuloActivo] = useState(null)
   const [vistaAdmin, setVistaAdmin] = useState(null)
   const [drawerAbierto, setDrawerAbierto] = useState(false)
@@ -186,13 +176,13 @@ export default function Dashboard({ user, perfil, cliente, establecimiento, esAd
   // pero no ve Administración (usuarios y clientes).
   const rol = perfil?.rol || 'cliente'
   const puedeGestionar = esAdmin || rol === 'supervisor'
-  const modulosPlanta = establecimiento?.modulos || []
+  const puedeCambiarCliente = rol !== 'cliente'
   const rolLabel = { admin: 'Administrador', supervisor: 'Supervisor', tecnico: 'Técnico' }[rol] || 'Usuario'
 
   const sidebarProps = {
-    cliente, establecimiento, modulosPlanta, esAdmin, esGestor, puedeCambiarEstablecimiento, rolLabel, moduloActivo, vistaAdmin,
+    cliente, esAdmin, puedeCambiarCliente, rolLabel, moduloActivo, vistaAdmin,
     onModulo: handleModulo, onAdmin: handleAdmin,
-    onCambiarEstablecimiento, onLogout: handleLogout,
+    onCambiarCliente, onLogout: handleLogout,
   }
 
   const MODULOS_CON_PANTALLA_PROPIA = ['contratistas', 'controles', 'legal']
@@ -264,7 +254,7 @@ export default function Dashboard({ user, perfil, cliente, establecimiento, esAd
                 <ControlesOperativos cliente={cliente} esAdmin={puedeGestionar} user={user} />
               )}
               {moduloActivo === 'legal' && (
-                <MatrizLegal cliente={cliente} establecimiento={establecimiento} esAdmin={puedeGestionar} user={user} />
+                <MatrizLegal cliente={cliente} esAdmin={puedeGestionar} user={user} />
               )}
               {!MODULOS_CON_PANTALLA_PROPIA.includes(moduloActivo) && (
                 <div className="p-6 md:p-10 max-w-2xl">
@@ -277,31 +267,15 @@ export default function Dashboard({ user, perfil, cliente, establecimiento, esAd
               )}
             </div>
           ) : (
-            !cliente ? (
-            <div className={isMobile ? 'p-5' : 'p-10 md:p-11'}>
-              <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-2">Panel general</p>
-              <h1 className="text-2xl md:text-[26px] font-bold text-ink tracking-tight mb-1.5">
-                Hola{perfil?.nombre ? `, ${perfil.nombre.split(' ')[0]}` : ''}
-              </h1>
-              <p className="text-slate text-[15px] mb-8">Elegí un cliente y un establecimiento para trabajar.</p>
-              <div className="max-w-[460px] bg-surface border border-hairline rounded-xl p-6">
-                <SelectorAcceso perfil={perfil} onEntrar={onElegir} embebido />
-              </div>
-            </div>
-            ) : (
             <div className={isMobile ? 'p-5' : 'p-10 md:p-11'}>
               <p className="text-xs font-semibold text-accent uppercase tracking-wider mb-2">Panel principal</p>
               <h1 className="text-2xl md:text-[26px] font-bold text-ink tracking-tight mb-1.5">
                 {cliente.nombre}
               </h1>
-              <p className="text-slate text-[15px] mb-8">
-                {establecimiento
-                  ? <>{establecimiento.nombre} · Seleccioná un módulo para comenzar.</>
-                  : 'Este cliente no tiene establecimientos. Cargalos en Administración → Clientes.'}
-              </p>
+              <p className="text-slate text-[15px] mb-8">Seleccioná un módulo para comenzar.</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {MODULOS.filter(m => !m.activo || modulosPlanta.includes(m.id)).map(({ id, Icon, label, desc, activo }) => (
+                {MODULOS.map(({ id, Icon, label, desc, activo }) => (
                   <button
                     key={id}
                     onClick={() => activo && handleModulo(id)}
@@ -325,7 +299,6 @@ export default function Dashboard({ user, perfil, cliente, establecimiento, esAd
                 ))}
               </div>
             </div>
-            )
           )}
         </main>
       </div>
