@@ -7,9 +7,11 @@ import DetalleRequisito from './DetalleRequisito'
 import FormularioRequisito from './FormularioRequisito'
 import ConfigMatrizLegal from './ConfigMatrizLegal'
 
-export default function MatrizLegal({ cliente, esAdmin, user }) {
-  const [vista, setVista] = useState('establecimientos') // establecimientos | dashboard | detalle | formulario | config
-  const [establecimiento, setEstablecimiento] = useState(null)
+// Si llega un establecimiento (elegido al ingresar a SafetyHub), entra directo a sus
+// requisitos; si no, muestra el selector de establecimientos como antes.
+export default function MatrizLegal({ cliente, establecimiento: establecimientoFijo, esAdmin, user }) {
+  const [vista, setVista] = useState(establecimientoFijo ? 'dashboard' : 'establecimientos') // establecimientos | dashboard | detalle | formulario | config
+  const [establecimiento, setEstablecimiento] = useState(establecimientoFijo || null)
   const [requisitoActivo, setRequisitoActivo] = useState(null)
 
   const irDashboard = () => { setVista('dashboard'); setRequisitoActivo(null) }
@@ -56,7 +58,7 @@ export default function MatrizLegal({ cliente, esAdmin, user }) {
         onNuevo={() => { setRequisitoActivo(null); setVista('formulario') }}
         onVerDetalle={irDetalle}
         onConfig={() => setVista('config')}
-        onVolver={irEstablecimientos}
+        onVolver={establecimientoFijo ? null : irEstablecimientos}
       />
     )
   }
