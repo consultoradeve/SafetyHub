@@ -6,8 +6,9 @@ import { ArrowLeft, RefreshCw, Users, Loader2, Info, Plus, X, MapPin } from 'luc
 import { Card, Select, Input, BtnGhost, EmptyState } from './contratistas/ui'
 
 const ROLES = [
-  { id: 'admin',   label: 'Administrador' },
-  { id: 'tecnico', label: 'Técnico' },
+  { id: 'admin',      label: 'Administrador' },
+  { id: 'supervisor', label: 'Supervisor' },
+  { id: 'tecnico',    label: 'Técnico' },
   { id: 'cliente', label: 'Usuario de cliente' },
 ]
 
@@ -21,6 +22,7 @@ function FilaUsuario({ u, clientes, plantas, asignaciones, onCambio }) {
 
   const rol = u.rol || 'cliente'
   const esAdmin = rol === 'admin'
+  const esSupervisor = rol === 'supervisor'
   const esTecnico = rol === 'tecnico'
   const accesoTotal = esTecnico && u.acceso_total
   const misAsig = asignaciones.filter(a => a.usuario_id === u.id)
@@ -81,7 +83,7 @@ function FilaUsuario({ u, clientes, plantas, asignaciones, onCambio }) {
       {/* Encabezado */}
       <div className="flex flex-wrap items-center gap-4">
         <div className={`w-[38px] h-[38px] rounded-lg flex items-center justify-center text-[13px] font-bold shrink-0
-                        ${esAdmin ? 'bg-blue-50 text-blue-700' : 'bg-accent-light text-accent'}`}>
+                        ${esAdmin || esSupervisor ? 'bg-blue-50 text-blue-700' : 'bg-accent-light text-accent'}`}>
           {(u.nombre || u.email || '?').slice(0, 2).toUpperCase()}
         </div>
         <div className="flex-1 min-w-[200px]">
@@ -111,7 +113,7 @@ function FilaUsuario({ u, clientes, plantas, asignaciones, onCambio }) {
             onBlur={() => nombre !== (u.nombre || '') && guardarPerfil({ nombre: nombre.trim() || null })}
             placeholder="Ej.: Lic. Gisela C. Losi" />
         </div>
-        {(esAdmin || esTecnico) && (
+        {(esAdmin || esSupervisor || esTecnico) && (
           <div>
             <p className="text-[11px] font-semibold text-slate uppercase tracking-wide mb-1">Matrícula</p>
             <Input value={matricula} onChange={e => setMatricula(e.target.value)}
@@ -128,7 +130,9 @@ function FilaUsuario({ u, clientes, plantas, asignaciones, onCambio }) {
         </p>
 
         {esAdmin ? (
-          <p className="text-[13px] text-slate">Acceso a todos los clientes y establecimientos.</p>
+          <p className="text-[13px] text-slate">Acceso total: todos los clientes, configuración, usuarios y clientes.</p>
+        ) : esSupervisor ? (
+          <p className="text-[13px] text-slate">Todos los clientes y establecimientos. Configura y borra dentro de los módulos; no gestiona usuarios ni clientes.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {esTecnico && (

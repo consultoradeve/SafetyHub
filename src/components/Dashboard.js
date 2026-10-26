@@ -58,7 +58,7 @@ function NavItem({ Icon, label, activo, disabled, badge, onClick }) {
   )
 }
 
-function SidebarContent({ cliente, esAdmin, moduloActivo, vistaAdmin, onModulo, onAdmin, onCambiarCliente, onLogout, onClose }) {
+function SidebarContent({ cliente, esAdmin, puedeCambiarCliente, rolLabel, moduloActivo, vistaAdmin, onModulo, onAdmin, onCambiarCliente, onLogout, onClose }) {
   const iniciales = cliente?.nombre?.slice(0, 2).toUpperCase() || 'DV'
   const go = (fn) => () => { fn(); onClose?.() }
 
@@ -90,7 +90,7 @@ function SidebarContent({ cliente, esAdmin, moduloActivo, vistaAdmin, onModulo, 
           )}
           <p className="text-sm font-semibold text-ink leading-tight">{cliente?.nombre}</p>
         </div>
-        {esAdmin && (
+        {puedeCambiarCliente && (
           <button
             onClick={go(onCambiarCliente)}
             className="flex items-center gap-1 text-xs font-semibold text-accent mt-2 hover:underline"
@@ -140,7 +140,7 @@ function SidebarContent({ cliente, esAdmin, moduloActivo, vistaAdmin, onModulo, 
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-semibold text-ink truncate">
-            {esAdmin ? 'Administrador' : 'Usuario'}
+            {rolLabel}
           </p>
           <p className="text-[11px] text-slate">Devé</p>
         </div>
@@ -172,8 +172,15 @@ export default function Dashboard({ user, perfil, cliente, esAdmin, onCambiarCli
 
   const moduloLabel = MODULOS.find(m => m.id === moduloActivo)?.label
 
+  // Administrador: todo. Supervisor: configura y borra dentro de los módulos,
+  // pero no ve Administración (usuarios y clientes).
+  const rol = perfil?.rol || 'cliente'
+  const puedeGestionar = esAdmin || rol === 'supervisor'
+  const puedeCambiarCliente = rol !== 'cliente'
+  const rolLabel = { admin: 'Administrador', supervisor: 'Supervisor', tecnico: 'Técnico' }[rol] || 'Usuario'
+
   const sidebarProps = {
-    cliente, esAdmin, moduloActivo, vistaAdmin,
+    cliente, esAdmin, puedeCambiarCliente, rolLabel, moduloActivo, vistaAdmin,
     onModulo: handleModulo, onAdmin: handleAdmin,
     onCambiarCliente, onLogout: handleLogout,
   }
@@ -241,13 +248,13 @@ export default function Dashboard({ user, perfil, cliente, esAdmin, onCambiarCli
               )}
 
               {moduloActivo === 'contratistas' && (
-                <Contratistas cliente={cliente} esAdmin={esAdmin} />
+                <Contratistas cliente={cliente} esAdmin={puedeGestionar} />
               )}
               {moduloActivo === 'controles' && (
-                <ControlesOperativos cliente={cliente} esAdmin={esAdmin} user={user} />
+                <ControlesOperativos cliente={cliente} esAdmin={puedeGestionar} user={user} />
               )}
               {moduloActivo === 'legal' && (
-                <MatrizLegal cliente={cliente} esAdmin={esAdmin} user={user} />
+                <MatrizLegal cliente={cliente} esAdmin={puedeGestionar} user={user} />
               )}
               {!MODULOS_CON_PANTALLA_PROPIA.includes(moduloActivo) && (
                 <div className="p-6 md:p-10 max-w-2xl">
