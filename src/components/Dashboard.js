@@ -13,19 +13,8 @@ import MatrizLegal from './matriz-legal'
 import AdminClientes from './AdminClientes'
 import AdminUsuarios from './AdminUsuarios'
 import { useIsMobile } from '@/lib/useResponsive'
+import { MODULOS } from '@/lib/modulos'
 
-export const MODULOS = [
-  { id: 'controles',   Icon: CheckCircle2,   label: 'Controles Operativos',   desc: 'Inspecciones por tipo de equipo con exportación PDF.',                   activo: true  },
-  { id: 'contratistas',Icon: HardHat,        label: 'Control de Contratistas',desc: 'Gestión documental de empresas contratistas y sus trabajadores.',        activo: true  },
-  { id: 'legal',       Icon: Scale,          label: 'Matriz de Cumplimiento Legal', desc: 'Requisitos legales por establecimiento con vencimientos y semáforo.', activo: true  },
-  { id: 'mediciones',  Icon: Gauge,          label: 'Mediciones de Higiene',  desc: 'Iluminación, ruido y puesta a tierra en un solo módulo.',                activo: false },
-  { id: 'ergonomico',  Icon: PersonStanding, label: 'Estudio Ergonómico',     desc: 'Evaluación de puestos de trabajo y factores de riesgo ergonómico.',      activo: false },
-  { id: 'carga_fuego', Icon: Flame,          label: 'Estudio de Carga de Fuego', desc: 'Cálculo de carga de fuego por sector según normativa vigente.',       activo: false },
-  { id: 'incidentes',  Icon: ClipboardList,  label: 'Registro de Incidentes', desc: 'Documentación de accidentes, casi-accidentes y situaciones de riesgo.',  activo: false },
-  { id: 'riesgo',      Icon: TriangleAlert,  label: 'Matriz de Riesgo',       desc: 'Evaluación y priorización de riesgos por probabilidad e impacto.',       activo: false },
-  { id: 'epp',         Icon: ShieldCheck,    label: 'Gestión de EPP',         desc: 'Control de entrega y stock de equipos de protección personal.',          activo: false },
-  { id: 'acap',        Icon: Wrench,         label: 'Plan ACAP',              desc: 'Consolidador de acciones correctivas y preventivas de todos los módulos.',activo: false },
-]
 
 const NAV = [
   { id: 'controles',    icon: CheckCircle2,  label: 'Controles Operativos' },
@@ -34,10 +23,10 @@ const NAV = [
   { id: 'mediciones',   icon: Gauge,          label: 'Mediciones de Higiene' },
   { id: 'ergonomico',   icon: PersonStanding, label: 'Estudio Ergonómico' },
   { id: 'carga_fuego',  icon: Flame,          label: 'Carga de Fuego' },
-  { id: 'incidentes',   icon: ClipboardList, label: 'Incidentes' },
+  { id: 'accidentes',   icon: ClipboardList, label: 'Investigación de Accidentes' },
   { id: 'riesgo',       icon: TriangleAlert, label: 'Matriz de Riesgo' },
   { id: 'epp',          icon: ShieldCheck,   label: 'Gestión EPP' },
-  { id: 'acap',         icon: Wrench,        label: 'Plan ACAP' },
+  { id: 'acp',          icon: Wrench,        label: 'Plan ACP' },
 ]
 
 function NavItem({ Icon, label, activo, disabled, badge, onClick }) {

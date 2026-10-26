@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import {
   ArrowLeft, Plus, Trash2, Building2, Loader2, Image as ImageIcon, Upload,
-  ChevronDown, ChevronUp, MapPin
+  ChevronDown, ChevronUp, MapPin, Pencil, Check, X
 } from 'lucide-react'
+import { MODULOS_OPERATIVOS } from '@/lib/modulos'
 import {
   Card, CardTitle, Label, Input, BtnPrimary, BtnGhost, EmptyState
 } from './contratistas/ui'
@@ -17,6 +18,7 @@ const CAMPOS = [
 ]
 
 // ─── ESTABLECIMIENTOS DE UN CLIENTE ──────────────────────────────────────────
+// Alta, edición (nombre y dirección), módulos habilitados y baja de cada planta.
 function Establecimientos({ cliente }) {
   const [items, setItems] = useState([])
   const [nombre, setNombre] = useState('')
@@ -24,6 +26,10 @@ function Establecimientos({ cliente }) {
   const [guardando, setGuardando] = useState(false)
   const [confirmDel, setConfirmDel] = useState(null)
   const [cargando, setCargando] = useState(true)
+  const [editId, setEditId] = useState(null)
+  const [editNombre, setEditNombre] = useState('')
+  const [editDireccion, setEditDireccion] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => { cargar() }, [cliente.id])
 
@@ -45,9 +51,38 @@ function Establecimientos({ cliente }) {
     setGuardando(false)
   }
 
-  const eliminar = async (id) => {
-    await supabase.from('establecimientos').delete().eq('id', id)
+  const empezarEdicion = (e) => {
+    setEditId(e.id)
+    setEditNombre(e.nombre || '')
+    setEditDireccion(e.direccion || '')
     setConfirmDel(null)
+  }
+
+  const guardarEdicion = async () => {
+    if (!editNombre.trim()) return
+    setGuardando(true)
+    await supabase.from('establecimientos')
+      .update({ nombre: editNombre.trim(), direccion: editDireccion.trim() || null })
+      .eq('id', editId)
+    setEditId(null)
+    await cargar()
+    setGuardando(false)
+  }
+
+  const cambiarModulo = async (e, moduloId) => {
+    const actuales = e.modulos || []
+    const nuevos = actuales.includes(moduloId)
+      ? actuales.filter(m => m !== moduloId)
+      : [...actuales, moduloId]
+    setItems(items.map(i => i.id === e.id ? { ...i, modulos: nuevos } : i))
+    await supabase.from('establecimientos').update({ modulos: nuevos }).eq('id', e.id)
+  }
+
+  const eliminar = async (id) => {
+    setError('')
+    const { error: err } = await supabase.from('establecimientos').delete().eq('id', id)
+    setConfirmDel(null)
+    if (err) setError('No se puede eliminar: el establecimiento tiene controles, equipos o requisitos cargados.')
     await cargar()
   }
 
@@ -70,6 +105,8 @@ function Establecimientos({ cliente }) {
         </BtnPrimary>
       </div>
 
+      {error && <p className="text-[13px] text-danger mb-2">{error}</p>}
+
       {cargando ? (
         <div className="flex items-center gap-2 text-slate text-sm py-2">
           <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
@@ -78,32 +115,73 @@ function Establecimientos({ cliente }) {
       ) : items.length === 0 ? (
         <p className="text-sm text-slate italic py-1">Sin establecimientos cargados.</p>
       ) : (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           {items.map(e => (
-            <div key={e.id} className="flex items-center gap-2.5 bg-white border border-hairline rounded-md px-3 py-2">
-              <Building2 className="w-3.5 h-3.5 text-slate shrink-0" strokeWidth={1.8} />
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-ink">{e.nombre}</p>
-                {e.direccion && <p className="text-[11px] text-slate">{e.direccion}</p>}
-              </div>
-              {confirmDel === e.id ? (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-[12px] text-danger">¿Eliminar?</span>
-                  <button onClick={() => eliminar(e.id)}
-                    className="px-2 py-1 rounded text-[12px] font-semibold text-white bg-danger hover:bg-red-800">
-                    Sí
-                  </button>
-                  <button onClick={() => setConfirmDel(null)}
-                    className="px-2 py-1 rounded text-[12px] font-semibold text-slate border border-hairline">
-                    No
-                  </button>
+            <div key={e.id} className="bg-white border border-hairline rounded-md px-3 py-2.5">
+              {editId === e.id ? (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input value={editNombre} onChange={ev => setEditNombre(ev.target.value)}
+                    placeholder="Nombre" className="flex-1" />
+                  <Input value={editDireccion} onChange={ev => setEditDireccion(ev.target.value)}
+                    onKeyDown={ev => ev.key === 'Enter' && guardarEdicion()}
+                    placeholder="Dirección" className="sm:w-[240px]" />
+                  <div className="flex gap-1.5 shrink-0">
+                    <button onClick={guardarEdicion} disabled={guardando || !editNombre.trim()}
+                      className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-[13px] font-semibold text-white bg-accent hover:bg-accent-hover disabled:opacity-50">
+                      <Check className="w-3.5 h-3.5" strokeWidth={2.2} /> Guardar
+                    </button>
+                    <button onClick={() => setEditId(null)}
+                      className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-[13px] font-semibold text-slate border border-hairline">
+                      <X className="w-3.5 h-3.5" strokeWidth={2.2} /> Cancelar
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <button onClick={() => setConfirmDel(e.id)}
-                  className="p-1 rounded text-danger border border-red-200 hover:bg-red-50 shrink-0">
-                  <Trash2 className="w-3 h-3" strokeWidth={2} />
-                </button>
+                <div className="flex items-center gap-2.5">
+                  <Building2 className="w-3.5 h-3.5 text-slate shrink-0" strokeWidth={1.8} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-ink">{e.nombre}</p>
+                    {e.direccion && <p className="text-[11px] text-slate">{e.direccion}</p>}
+                  </div>
+                  {confirmDel === e.id ? (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[12px] text-danger">¿Eliminar?</span>
+                      <button onClick={() => eliminar(e.id)}
+                        className="px-2 py-1 rounded text-[12px] font-semibold text-white bg-danger hover:bg-red-800">
+                        Sí
+                      </button>
+                      <button onClick={() => setConfirmDel(null)}
+                        className="px-2 py-1 rounded text-[12px] font-semibold text-slate border border-hairline">
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-1.5 shrink-0">
+                      <button onClick={() => empezarEdicion(e)} aria-label={`Editar ${e.nombre}`}
+                        className="p-1 rounded text-slate border border-hairline hover:border-accent hover:text-accent">
+                        <Pencil className="w-3 h-3" strokeWidth={2} />
+                      </button>
+                      <button onClick={() => setConfirmDel(e.id)} aria-label={`Eliminar ${e.nombre}`}
+                        className="p-1 rounded text-danger border border-red-200 hover:bg-red-50">
+                        <Trash2 className="w-3 h-3" strokeWidth={2} />
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
+
+              {/* Módulos habilitados en este establecimiento */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2 pl-6">
+                <span className="text-[11px] font-semibold text-slate uppercase tracking-wide">Módulos</span>
+                {MODULOS_OPERATIVOS.map(m => (
+                  <label key={m.id} className="inline-flex items-center gap-1.5 text-[12px] text-ink cursor-pointer">
+                    <input type="checkbox" className="accent-[#0F5132] w-3.5 h-3.5"
+                      checked={(e.modulos || []).includes(m.id)}
+                      onChange={() => cambiarModulo(e, m.id)} />
+                    {m.label}
+                  </label>
+                ))}
+              </div>
             </div>
           ))}
         </div>
