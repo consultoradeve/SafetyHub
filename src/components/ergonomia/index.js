@@ -103,7 +103,7 @@ export default function Ergonomia({ cliente, esAdmin }) {
         ))}
       </div>
 
-      {pestana === 'matriz'   && <MatrizErgonomica planta={planta} onVerEstudio={setEstudioId} />}
+      {pestana === 'matriz'   && <MatrizErgonomica cliente={cliente} planta={planta} onVerEstudio={setEstudioId} />}
       {pestana === 'estudios' && <ListaEstudios planta={planta} onVerEstudio={setEstudioId} />}
       {pestana === 'acciones' && <Acciones planta={planta} onVerEstudio={setEstudioId} />}
     </div>
