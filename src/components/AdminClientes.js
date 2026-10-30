@@ -12,9 +12,11 @@ import {
 } from './contratistas/ui'
 
 const CAMPOS = [
-  ['nombre',   'Nombre de la empresa *', 'Carrefour S.A.'],
-  ['contacto', 'Persona de contacto',    'Juan Pérez'],
-  ['rut',      'CUIT / RUT',             '30-12345678-9'],
+  ['nombre',       'Nombre de la empresa *', 'Carrefour'],
+  ['razon_social', 'Razón social',           'Carrefour Argentina S.A.'],
+  ['rut',          'CUIT',                   '30-12345678-9'],
+  ['ciiu',         'CIIU (actividad)',       '471120'],
+  ['contacto',     'Persona de contacto',    'Juan Pérez'],
 ]
 
 // ─── ESTABLECIMIENTOS DE UN CLIENTE ──────────────────────────────────────────
@@ -23,12 +25,16 @@ function Establecimientos({ cliente }) {
   const [items, setItems] = useState([])
   const [nombre, setNombre] = useState('')
   const [direccion, setDireccion] = useState('')
+  const [localidad, setLocalidad] = useState('')
+  const [provincia, setProvincia] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [confirmDel, setConfirmDel] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [editId, setEditId] = useState(null)
   const [editNombre, setEditNombre] = useState('')
   const [editDireccion, setEditDireccion] = useState('')
+  const [editLocalidad, setEditLocalidad] = useState('')
+  const [editProvincia, setEditProvincia] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => { cargar() }, [cliente.id])
@@ -45,8 +51,9 @@ function Establecimientos({ cliente }) {
     setGuardando(true)
     await supabase.from('establecimientos').insert({
       cliente_id: cliente.id, nombre: nombre.trim(), direccion: direccion.trim() || null,
+      localidad: localidad.trim() || null, provincia: provincia.trim() || null,
     })
-    setNombre(''); setDireccion('')
+    setNombre(''); setDireccion(''); setLocalidad(''); setProvincia('')
     await cargar()
     setGuardando(false)
   }
@@ -55,6 +62,8 @@ function Establecimientos({ cliente }) {
     setEditId(e.id)
     setEditNombre(e.nombre || '')
     setEditDireccion(e.direccion || '')
+    setEditLocalidad(e.localidad || '')
+    setEditProvincia(e.provincia || '')
     setConfirmDel(null)
   }
 
@@ -62,7 +71,7 @@ function Establecimientos({ cliente }) {
     if (!editNombre.trim()) return
     setGuardando(true)
     await supabase.from('establecimientos')
-      .update({ nombre: editNombre.trim(), direccion: editDireccion.trim() || null })
+      .update({ nombre: editNombre.trim(), direccion: editDireccion.trim() || null, localidad: editLocalidad.trim() || null, provincia: editProvincia.trim() || null })
       .eq('id', editId)
     setEditId(null)
     await cargar()
@@ -99,6 +108,11 @@ function Establecimientos({ cliente }) {
         <Input placeholder="Dirección (opcional)"
           value={direccion} onChange={e => setDireccion(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && agregar()} className="sm:w-[240px]" />
+        <Input placeholder="Localidad"
+          value={localidad} onChange={e => setLocalidad(e.target.value)} className="sm:w-[150px]" />
+        <Input placeholder="Provincia"
+          value={provincia} onChange={e => setProvincia(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && agregar()} className="sm:w-[150px]" />
         <BtnPrimary onClick={agregar} disabled={guardando || !nombre.trim()} className="shrink-0 px-4 py-2 text-[13px]">
           <Plus className="w-3.5 h-3.5" strokeWidth={2.2} />
           Agregar
@@ -125,6 +139,10 @@ function Establecimientos({ cliente }) {
                   <Input value={editDireccion} onChange={ev => setEditDireccion(ev.target.value)}
                     onKeyDown={ev => ev.key === 'Enter' && guardarEdicion()}
                     placeholder="Dirección" className="sm:w-[240px]" />
+                  <Input value={editLocalidad} onChange={ev => setEditLocalidad(ev.target.value)}
+                    placeholder="Localidad" className="sm:w-[150px]" />
+                  <Input value={editProvincia} onChange={ev => setEditProvincia(ev.target.value)}
+                    placeholder="Provincia" className="sm:w-[150px]" />
                   <div className="flex gap-1.5 shrink-0">
                     <button onClick={guardarEdicion} disabled={guardando || !editNombre.trim()}
                       className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-[13px] font-semibold text-white bg-accent hover:bg-accent-hover disabled:opacity-50">
@@ -141,7 +159,7 @@ function Establecimientos({ cliente }) {
                   <Building2 className="w-3.5 h-3.5 text-slate shrink-0" strokeWidth={1.8} />
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-semibold text-ink">{e.nombre}</p>
-                    {e.direccion && <p className="text-[11px] text-slate">{e.direccion}</p>}
+                    {(e.direccion || e.localidad || e.provincia) && <p className="text-[11px] text-slate">{[e.direccion, e.localidad, e.provincia].filter(Boolean).join(', ')}</p>}
                   </div>
                   {confirmDel === e.id ? (
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -192,7 +210,7 @@ function Establecimientos({ cliente }) {
 
 export default function AdminClientes({ onVolver }) {
   const [clientes, setClientes] = useState([])
-  const [form, setForm] = useState({ nombre: '', contacto: '', rut: '' })
+  const [form, setForm] = useState({ nombre: '', razon_social: '', contacto: '', rut: '', ciiu: '' })
   const [editando, setEditando] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [confirmDel, setConfirmDel] = useState(null)
@@ -254,7 +272,7 @@ export default function AdminClientes({ onVolver }) {
       }
     }
 
-    setForm({ nombre: '', contacto: '', rut: '' })
+    setForm({ nombre: '', razon_social: '', contacto: '', rut: '', ciiu: '' })
     setLogoFile(null); setLogoPreview(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
     await cargar()
@@ -269,14 +287,14 @@ export default function AdminClientes({ onVolver }) {
 
   const editar = (c) => {
     setEditando(c.id)
-    setForm({ nombre: c.nombre, contacto: c.contacto || '', rut: c.rut || '' })
+    setForm({ nombre: c.nombre, razon_social: c.razon_social || '', contacto: c.contacto || '', rut: c.rut || '', ciiu: c.ciiu || '' })
     setLogoFile(null)
     setLogoPreview(c.logo_url || null)
   }
 
   const cancelarEdicion = () => {
     setEditando(null)
-    setForm({ nombre: '', contacto: '', rut: '' })
+    setForm({ nombre: '', razon_social: '', contacto: '', rut: '', ciiu: '' })
     setLogoFile(null); setLogoPreview(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
@@ -394,7 +412,7 @@ export default function AdminClientes({ onVolver }) {
                   </span>
                 </div>
                 <p className="text-[13px] text-slate mt-0.5">
-                  {[c.contacto, c.rut].filter(Boolean).join(' · ') || 'Sin datos adicionales'}
+                  {[c.razon_social, c.rut && `CUIT ${c.rut}`, c.ciiu && `CIIU ${c.ciiu}`].filter(Boolean).join(' · ') || 'Sin datos adicionales'}
                 </p>
               </div>
 
