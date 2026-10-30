@@ -12,7 +12,7 @@ export default function ListaEstudios({ planta, onVerEstudio }) {
 
   useEffect(() => {
     supabase.from('erg_estudios')
-      .select('id, fecha, puesto, sector, origen, estado, evaluador_texto, erg_tareas(count), erg_medidas(count)')
+      .select('id, fecha, puesto, sector, origen, estado, tipo, evaluador_texto, erg_tareas(count), erg_medidas(count)')
       .eq('establecimiento_id', planta.id)
       .order('fecha', { ascending: false })
       .then(({ data }) => { setEstudios(data || []); setCargando(false) })
@@ -30,11 +30,20 @@ export default function ListaEstudios({ planta, onVerEstudio }) {
   return (
     <Card className="overflow-hidden">
       {estudios.map((e, i) => (
-        <button key={e.id} onClick={() => onVerEstudio(e.id)}
+        <button key={e.id} onClick={() => onVerEstudio(e.id, e.estado)}
           className={`w-full flex flex-wrap items-center gap-4 px-5 py-4 text-left hover:bg-accent-light/40
                       ${i > 0 ? 'border-t border-hairline' : ''}`}>
           <div className="w-[88px] shrink-0">
             <p className="text-[15px] font-bold text-ink">{fechaCorta(e.fecha)}</p>
+            {e.estado === 'borrador' && (
+              <span className="inline-block mt-1 mr-1 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">Borrador</span>
+            )}
+            {e.estado === 'relevado' && (
+              <span className="inline-block mt-1 mr-1 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-blue-100 text-blue-900">Relevado</span>
+            )}
+            {e.tipo === 'concepcion' && (
+              <span className="inline-block mt-1 mr-1 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">Concepción</span>
+            )}
             {e.origen === 'migrado' && (
               <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">Migrado</span>
             )}

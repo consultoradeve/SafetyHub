@@ -8,6 +8,7 @@ import MatrizErgonomica from './MatrizErgonomica'
 import ListaEstudios from './ListaEstudios'
 import DetalleEstudio from './DetalleEstudio'
 import Acciones from './Acciones'
+import ChecklistCampo from './ChecklistCampo'
 
 const PESTANAS = [
   { id: 'matriz',   label: 'Matriz ergonómica', Icon: Grid3x3 },
@@ -15,12 +16,15 @@ const PESTANAS = [
   { id: 'acciones', label: 'Acciones',          Icon: ListChecks },
 ]
 
-export default function Ergonomia({ cliente, esAdmin }) {
+export default function Ergonomia({ cliente, esAdmin, puedeCargar }) {
   const [plantas, setPlantas] = useState([])
   const [planta, setPlanta] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [pestana, setPestana] = useState('matriz')
   const [estudioId, setEstudioId] = useState(null)
+  const [checklist, setChecklist] = useState(null) // null | 'nuevo' | id de un borrador
+  const [refresco, setRefresco] = useState(0)
+  const abrirEstudio = (id, estado) => (estado === 'borrador' && puedeCargar) ? setChecklist(id) : setEstudioId(id)
 
   useEffect(() => {
     const cargar = async () => {
@@ -71,6 +75,11 @@ export default function Ergonomia({ cliente, esAdmin }) {
     </div>
   )
 
+  if (checklist) return (
+    <ChecklistCampo cliente={cliente} planta={planta} estudioId={checklist === 'nuevo' ? null : checklist}
+      onCerrar={() => { setChecklist(null); setPestana('estudios'); setRefresco(r => r + 1) }} />
+  )
+
   if (estudioId) return (
     <DetalleEstudio estudioId={estudioId} esAdmin={esAdmin} onVolver={() => setEstudioId(null)} />
   )
@@ -84,12 +93,20 @@ export default function Ergonomia({ cliente, esAdmin }) {
             {cliente.nombre} · <span className="font-semibold text-ink">{planta.nombre}</span>
           </p>
         </div>
-        {plantas.length > 1 && (
-          <BtnGhost onClick={() => setPlanta(null)}>
-            <ArrowLeft className="w-4 h-4" strokeWidth={2} />
-            Cambiar establecimiento
-          </BtnGhost>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {puedeCargar && (
+            <button onClick={() => setChecklist('nuevo')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold text-white bg-accent hover:bg-accent-hover">
+              + Nuevo estudio
+            </button>
+          )}
+          {plantas.length > 1 && (
+            <BtnGhost onClick={() => setPlanta(null)}>
+              <ArrowLeft className="w-4 h-4" strokeWidth={2} />
+              Cambiar establecimiento
+            </BtnGhost>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-1 border-b border-hairline mb-5 overflow-x-auto" role="tablist">
@@ -104,7 +121,7 @@ export default function Ergonomia({ cliente, esAdmin }) {
       </div>
 
       {pestana === 'matriz'   && <MatrizErgonomica cliente={cliente} planta={planta} onVerEstudio={setEstudioId} />}
-      {pestana === 'estudios' && <ListaEstudios planta={planta} onVerEstudio={setEstudioId} />}
+      {pestana === 'estudios' && <ListaEstudios key={refresco} planta={planta} onVerEstudio={abrirEstudio} />}
       {pestana === 'acciones' && <Acciones planta={planta} onVerEstudio={setEstudioId} />}
     </div>
   )

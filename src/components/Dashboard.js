@@ -255,7 +255,7 @@ export default function Dashboard({ user, perfil, cliente, esAdmin, onCambiarCli
                 <ControlesOperativos cliente={cliente} esAdmin={puedeGestionar} user={user} />
               )}
               {moduloActivo === 'ergonomico' && (
-                <Ergonomia cliente={cliente} esAdmin={puedeGestionar} />
+                <Ergonomia cliente={cliente} esAdmin={puedeGestionar} puedeCargar={rol !== 'cliente'} />
               )}
               {moduloActivo === 'legal' && (
                 <MatrizLegal cliente={cliente} esAdmin={puedeGestionar} user={user} />
